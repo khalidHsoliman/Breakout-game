@@ -43,6 +43,9 @@ namespace platform
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+        // Fixed size: nothing updates the GL viewport on resize.
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
         GLFWwindow* handle = glfwCreateWindow(width, height, title, nullptr, nullptr);
         if (handle == nullptr)
         {

@@ -2,7 +2,8 @@ add_library(breakout_math INTERFACE)
 target_include_directories(breakout_math INTERFACE "${CMAKE_SOURCE_DIR}/include")
 
 add_library(breakout_platform STATIC
-    platform/Window.cpp)
+    platform/Window.cpp
+    platform/Renderer.cpp)
 
 target_include_directories(breakout_platform PUBLIC "${CMAKE_SOURCE_DIR}/include")
 target_link_libraries(breakout_platform PRIVATE glfw glad breakout_options)
