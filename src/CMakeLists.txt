@@ -1,3 +1,6 @@
+add_library(breakout_math INTERFACE)
+target_include_directories(breakout_math INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
+
 add_executable(breakout
     main.cpp)
 

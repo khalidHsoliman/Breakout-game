@@ -23,7 +23,9 @@ option(BREAKOUT_BUILD_TESTS "Build the unit tests" ON)
 # Applied to our targets only, so vendored code keeps its own warning level.
 add_library(breakout_options INTERFACE)
 if(MSVC)
-    target_compile_options(breakout_options INTERFACE /W4 /permissive- /utf-8 /MP)
+    # /we4838: MSVC only warns about narrowing conversions in braced
+    # initialisation. Other compilers reject them outright; this matches that.
+    target_compile_options(breakout_options INTERFACE /W4 /permissive- /utf-8 /MP /we4838)
 else()
     target_compile_options(breakout_options INTERFACE -Wall -Wextra -Wpedantic)
 endif()
