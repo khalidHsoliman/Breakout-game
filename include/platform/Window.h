@@ -1,5 +1,8 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
+
 #include "math/Vec2.h"
 
 // Opaque to everything outside Window.cpp - keeps GLFW out of this header, so
@@ -10,8 +13,11 @@ namespace platform
 {
     enum class Key
     {
-        Escape
+        Escape,
+        ToggleFullscreen
     };
+
+    inline constexpr std::size_t key_count = 2;
 
     class Window
     {
@@ -27,8 +33,13 @@ namespace platform
         // until this has returned true.
         //
         // When fullscreen is true the window covers the primary monitor at its
-        // current video mode and width/height are ignored.
+        // current video mode; width and height then apply to windowed mode.
         bool init(int width, int height, const char* title, bool fullscreen);
+
+        // Keeps the OpenGL context, so the renderer's objects stay valid. The
+        // framebuffer size changes, so the caller must reset the viewport.
+        void set_fullscreen(bool fullscreen);
+        bool is_fullscreen() const;
 
         // In pixels, which is not the same as the window size on high-DPI
         // displays. This is what the viewport must be sized against.
@@ -38,9 +49,25 @@ namespace platform
         void request_close();
         void poll_events();
         void swap_buffers();
+
+        // Held this frame.
         bool is_key_down(Key key) const;
+
+        // Went down this frame - use for one-shot actions, since is_key_down
+        // stays true for as long as the key is held.
+        bool is_key_pressed(Key key) const;
 
     private:
         GLFWwindow* m_handle = nullptr;
+
+        std::array<bool, key_count> m_previous_key_state{};
+
+        bool m_fullscreen = false;
+
+        // Where to put the window when leaving fullscreen.
+        int m_windowed_x = 0;
+        int m_windowed_y = 0;
+        int m_windowed_width = 0;
+        int m_windowed_height = 0;
     };
 }

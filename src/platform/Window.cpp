@@ -24,6 +24,8 @@ namespace platform
             {
             case Key::Escape:
                 return GLFW_KEY_ESCAPE;
+            case Key::ToggleFullscreen:
+                return GLFW_KEY_F11;
             }
             return GLFW_KEY_UNKNOWN;
         }
@@ -94,9 +96,66 @@ namespace platform
 
         glfwSwapInterval(1);
 
+        // Remember a windowed placement to restore when leaving fullscreen. If
+        // we started fullscreen there is nothing to remember, so centre it.
+        m_windowed_width = width;
+        m_windowed_height = height;
+
+        if (fullscreen)
+        {
+            m_windowed_x = (create_width - width) / 2;
+            m_windowed_y = (create_height - height) / 2;
+        }
+        else
+        {
+            glfwGetWindowPos(handle, &m_windowed_x, &m_windowed_y);
+        }
+
+        m_fullscreen = fullscreen;
+
         // Assigned last, so a non-null m_handle means fully initialised.
         m_handle = handle;
         return true;
+    }
+
+    void Window::set_fullscreen(bool fullscreen)
+    {
+        if (fullscreen == m_fullscreen)
+        {
+            return;
+        }
+
+        if (fullscreen)
+        {
+            glfwGetWindowPos(m_handle, &m_windowed_x, &m_windowed_y);
+            glfwGetWindowSize(m_handle, &m_windowed_width, &m_windowed_height);
+
+            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = (monitor != nullptr) ? glfwGetVideoMode(monitor) : nullptr;
+            if (mode == nullptr)
+            {
+                std::fprintf(stderr, "Failed to query the primary monitor.\n");
+                return;
+            }
+
+            glfwSetWindowMonitor(m_handle, monitor, 0, 0,
+                                 mode->width, mode->height, mode->refreshRate);
+        }
+        else
+        {
+            glfwSetWindowMonitor(m_handle, nullptr, m_windowed_x, m_windowed_y,
+                                 m_windowed_width, m_windowed_height, GLFW_DONT_CARE);
+        }
+
+        // The swap interval is not guaranteed to survive a monitor change.
+        glfwSwapInterval(1);
+
+        m_fullscreen = fullscreen;
+    }
+
+    bool Window::is_fullscreen() const
+    {
+        return m_fullscreen;
     }
 
     Window::~Window()
@@ -128,6 +187,13 @@ namespace platform
 
     void Window::poll_events()
     {
+        // Snapshot before polling, so is_key_pressed compares this frame's
+        // state against the previous frame's.
+        for (std::size_t i = 0; i < key_count; ++i)
+        {
+            m_previous_key_state[i] = is_key_down(static_cast<Key>(i));
+        }
+
         glfwPollEvents();
     }
 
@@ -139,5 +205,10 @@ namespace platform
     bool Window::is_key_down(Key key) const
     {
         return glfwGetKey(m_handle, to_glfw_key(key)) == GLFW_PRESS;
+    }
+
+    bool Window::is_key_pressed(Key key) const
+    {
+        return is_key_down(key) && !m_previous_key_state[static_cast<std::size_t>(key)];
     }
 }

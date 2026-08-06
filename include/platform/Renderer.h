@@ -29,6 +29,10 @@ namespace platform
         // by the shape of the display.
         bool init(math::Vec2 world_size, math::Vec2 framebuffer_size);
 
+        // Call again whenever the framebuffer size changes, such as after
+        // toggling fullscreen.
+        void set_viewport(math::Vec2 framebuffer_size);
+
         void begin_frame();
         void clear(core::Color color);
         void draw_quad(math::Vec2 center, math::Vec2 size, core::Color color);
@@ -42,6 +46,7 @@ namespace platform
         };
 
         std::vector<Vertex> m_vertices;
+        math::Vec2 m_world_size;
 
         // GLuint is unsigned int, so handles can live here without glad.
         unsigned int m_program = 0;

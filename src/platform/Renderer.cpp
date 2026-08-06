@@ -107,29 +107,8 @@ void main()
             return false;
         }
 
-        // Fit the world's aspect ratio inside the framebuffer and centre it.
-        // Whichever axis has room to spare becomes a bar.
-        const float world_aspect = world_size.x / world_size.y;
-        const float frame_aspect = framebuffer_size.x / framebuffer_size.y;
-
-        float viewport_width = framebuffer_size.x;
-        float viewport_height = framebuffer_size.y;
-
-        if (frame_aspect > world_aspect)
-        {
-            viewport_width = framebuffer_size.y * world_aspect;
-        }
-        else
-        {
-            viewport_height = framebuffer_size.x / world_aspect;
-        }
-
-        m_viewport_width = static_cast<int>(viewport_width);
-        m_viewport_height = static_cast<int>(viewport_height);
-        m_viewport_x = static_cast<int>((framebuffer_size.x - viewport_width) * 0.5f);
-        m_viewport_y = static_cast<int>((framebuffer_size.y - viewport_height) * 0.5f);
-
-        glViewport(m_viewport_x, m_viewport_y, m_viewport_width, m_viewport_height);
+        m_world_size = world_size;
+        set_viewport(framebuffer_size);
 
         unsigned int vao = 0;
         unsigned int vbo = 0;
@@ -158,6 +137,33 @@ void main()
         m_vao = vao;
         m_vbo = vbo;
         return true;
+    }
+
+    void Renderer::set_viewport(math::Vec2 framebuffer_size)
+    {
+        // Fit the world's aspect ratio inside the framebuffer and centre it.
+        // Whichever axis has room to spare becomes a bar.
+        const float world_aspect = m_world_size.x / m_world_size.y;
+        const float frame_aspect = framebuffer_size.x / framebuffer_size.y;
+
+        float viewport_width = framebuffer_size.x;
+        float viewport_height = framebuffer_size.y;
+
+        if (frame_aspect > world_aspect)
+        {
+            viewport_width = framebuffer_size.y * world_aspect;
+        }
+        else
+        {
+            viewport_height = framebuffer_size.x / world_aspect;
+        }
+
+        m_viewport_width = static_cast<int>(viewport_width);
+        m_viewport_height = static_cast<int>(viewport_height);
+        m_viewport_x = static_cast<int>((framebuffer_size.x - viewport_width) * 0.5f);
+        m_viewport_y = static_cast<int>((framebuffer_size.y - viewport_height) * 0.5f);
+
+        glViewport(m_viewport_x, m_viewport_y, m_viewport_width, m_viewport_height);
     }
 
     Renderer::~Renderer()

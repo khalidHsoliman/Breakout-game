@@ -6,9 +6,10 @@
 
 namespace
 {
-    constexpr bool fullscreen = true;
+    // Starting mode only - F11 toggles at runtime.
+    constexpr bool start_fullscreen = true;
 
-    // Ignored when fullscreen.
+    // Used for windowed mode, whether that is at startup or after a toggle.
     constexpr int window_width = 800;
     constexpr int window_height = 600;
 
@@ -68,7 +69,7 @@ namespace
 int main()
 {
     platform::Window window;
-    if (!window.init(window_width, window_height, "Breakout", fullscreen))
+    if (!window.init(window_width, window_height, "Breakout", start_fullscreen))
     {
         return 1;
     }
@@ -89,6 +90,12 @@ int main()
         if (window.is_key_down(platform::Key::Escape))
         {
             window.request_close();
+        }
+
+        if (window.is_key_pressed(platform::Key::ToggleFullscreen))
+        {
+            window.set_fullscreen(!window.is_fullscreen());
+            renderer.set_viewport(window.framebuffer_size());
         }
 
         renderer.begin_frame();
