@@ -1,12 +1,47 @@
 #pragma once
 
+#include <vector>
+
+#include "core/Color.h"
+#include "math/Vec2.h"
+
 namespace platform
 {
     // Owns every OpenGL call in the project. Needs a current context with its
     // function pointers loaded, so a Window must be initialised first.
+    //
+    // Quads are batched: draw_quad appends vertices to a CPU-side buffer and
+    // end_frame uploads the whole frame and issues a single draw call.
     class Renderer
     {
     public:
-        void clear(float red, float green, float blue);
+        Renderer() = default;
+        ~Renderer();
+
+        Renderer(const Renderer&) = delete;
+        Renderer& operator=(const Renderer&) = delete;
+
+        // Compiles the shaders and creates the vertex buffers. Reports the
+        // reason to stderr and returns false on failure.
+        bool init(math::Vec2 world_size);
+
+        void begin_frame();
+        void clear(core::Color color);
+        void draw_quad(math::Vec2 center, math::Vec2 size, core::Color color);
+        void end_frame();
+
+    private:
+        struct Vertex
+        {
+            float x, y;
+            float r, g, b;
+        };
+
+        std::vector<Vertex> m_vertices;
+
+        // GLuint is unsigned int, so handles can live here without glad.
+        unsigned int m_program = 0;
+        unsigned int m_vao = 0;
+        unsigned int m_vbo = 0;
     };
 }

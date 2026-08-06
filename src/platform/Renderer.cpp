@@ -1,12 +1,201 @@
 #include <glad/gl.h>
 
+#include <cstddef>
+#include <cstdio>
+
 #include "platform/Renderer.h"
 
 namespace platform
 {
-    void Renderer::clear(float red, float green, float blue)
+    namespace
     {
-        glClearColor(red, green, blue, 1.0f);
+        const char* vertex_shader_source = R"(
+#version 330 core
+
+layout (location = 0) in vec2 a_position;
+layout (location = 1) in vec3 a_color;
+
+uniform vec2 u_world_size;
+
+out vec3 v_color;
+
+void main()
+{
+    vec2 ndc = (a_position / u_world_size) * 2.0 - 1.0;
+    gl_Position = vec4(ndc, 0.0, 1.0);
+    v_color = a_color;
+}
+)";
+
+        const char* fragment_shader_source = R"(
+#version 330 core
+
+in vec3 v_color;
+
+out vec4 frag_color;
+
+void main()
+{
+    frag_color = vec4(v_color, 1.0);
+}
+)";
+
+        unsigned int compile_shader(unsigned int type, const char* source)
+        {
+            const unsigned int shader = glCreateShader(type);
+            glShaderSource(shader, 1, &source, nullptr);
+            glCompileShader(shader);
+
+            int success = 0;
+            glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+            if (success == GL_FALSE)
+            {
+                char log[512] = {};
+                glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+                std::fprintf(stderr, "Shader compilation failed: %s\n", log);
+                glDeleteShader(shader);
+                return 0;
+            }
+
+            return shader;
+        }
+
+        unsigned int link_program(const char* vertex_source, const char* fragment_source)
+        {
+            const unsigned int vertex = compile_shader(GL_VERTEX_SHADER, vertex_source);
+            if (vertex == 0)
+            {
+                return 0;
+            }
+
+            const unsigned int fragment = compile_shader(GL_FRAGMENT_SHADER, fragment_source);
+            if (fragment == 0)
+            {
+                glDeleteShader(vertex);
+                return 0;
+            }
+
+            const unsigned int program = glCreateProgram();
+            glAttachShader(program, vertex);
+            glAttachShader(program, fragment);
+            glLinkProgram(program);
+
+            // Linking copies the compiled code into the program.
+            glDeleteShader(vertex);
+            glDeleteShader(fragment);
+
+            int success = 0;
+            glGetProgramiv(program, GL_LINK_STATUS, &success);
+            if (success == GL_FALSE)
+            {
+                char log[512] = {};
+                glGetProgramInfoLog(program, sizeof(log), nullptr, log);
+                std::fprintf(stderr, "Shader link failed: %s\n", log);
+                glDeleteProgram(program);
+                return 0;
+            }
+
+            return program;
+        }
+    }
+
+    bool Renderer::init(math::Vec2 world_size)
+    {
+        const unsigned int program = link_program(vertex_shader_source, fragment_shader_source);
+        if (program == 0)
+        {
+            return false;
+        }
+
+        unsigned int vao = 0;
+        unsigned int vbo = 0;
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+
+        // The vertex array records the format and the buffer it reads from, so
+        // both must be bound while the attributes are described.
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              reinterpret_cast<const void*>(offsetof(Vertex, x)));
+        glEnableVertexAttribArray(0);
+
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              reinterpret_cast<const void*>(offsetof(Vertex, r)));
+        glEnableVertexAttribArray(1);
+
+        glBindVertexArray(0);
+
+        glUseProgram(program);
+        glUniform2f(glGetUniformLocation(program, "u_world_size"), world_size.x, world_size.y);
+
+        m_program = program;
+        m_vao = vao;
+        m_vbo = vbo;
+        return true;
+    }
+
+    Renderer::~Renderer()
+    {
+        // OpenGL ignores a name of 0, so these are safe even if init failed.
+        glDeleteBuffers(1, &m_vbo);
+        glDeleteVertexArrays(1, &m_vao);
+        glDeleteProgram(m_program);
+    }
+
+    void Renderer::begin_frame()
+    {
+        // Keeps the capacity, so steady-state frames do not allocate.
+        m_vertices.clear();
+    }
+
+    void Renderer::clear(core::Color color)
+    {
+        glClearColor(color.r, color.g, color.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+    }
+
+    void Renderer::draw_quad(math::Vec2 center, math::Vec2 size, core::Color color)
+    {
+        const math::Vec2 half = size * 0.5f;
+
+        const float left = center.x - half.x;
+        const float right = center.x + half.x;
+        const float bottom = center.y - half.y;
+        const float top = center.y + half.y;
+
+        const Vertex bottom_left{left, bottom, color.r, color.g, color.b};
+        const Vertex bottom_right{right, bottom, color.r, color.g, color.b};
+        const Vertex top_right{right, top, color.r, color.g, color.b};
+        const Vertex top_left{left, top, color.r, color.g, color.b};
+
+        m_vertices.push_back(bottom_left);
+        m_vertices.push_back(bottom_right);
+        m_vertices.push_back(top_right);
+
+        m_vertices.push_back(top_right);
+        m_vertices.push_back(top_left);
+        m_vertices.push_back(bottom_left);
+    }
+
+    void Renderer::end_frame()
+    {
+        if (m_vertices.empty())
+        {
+            return;
+        }
+
+        glBindVertexArray(m_vao);
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(m_vertices.size() * sizeof(Vertex)),
+                     m_vertices.data(),
+                     GL_DYNAMIC_DRAW);
+
+        glUseProgram(m_program);
+        glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(m_vertices.size()));
+
+        glBindVertexArray(0);
     }
 }
