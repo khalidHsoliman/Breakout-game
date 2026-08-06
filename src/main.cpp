@@ -7,7 +7,7 @@ namespace
     constexpr int window_height = 600;
 
     // World units. Currently 1:1 with pixels at the default window size, but
-    // nothing in the simulation may rely on that.
+    // nothing in the game may rely on that.
     constexpr math::Vec2 world_size{800.0f, 600.0f};
 }
 

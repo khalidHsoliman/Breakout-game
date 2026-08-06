@@ -12,11 +12,12 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(breakout_tests
     smoke_tests.cpp
-    math_tests.cpp)
+    math_tests.cpp
+    component_store_tests.cpp)
 
 target_link_libraries(breakout_tests PRIVATE
     GTest::gtest_main
-    breakout_math
+    breakout_core
     breakout_options)
 
 include(GoogleTest)
