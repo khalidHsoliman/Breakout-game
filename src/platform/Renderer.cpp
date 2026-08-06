@@ -99,13 +99,37 @@ void main()
         }
     }
 
-    bool Renderer::init(math::Vec2 world_size)
+    bool Renderer::init(math::Vec2 world_size, math::Vec2 framebuffer_size)
     {
         const unsigned int program = link_program(vertex_shader_source, fragment_shader_source);
         if (program == 0)
         {
             return false;
         }
+
+        // Fit the world's aspect ratio inside the framebuffer and centre it.
+        // Whichever axis has room to spare becomes a bar.
+        const float world_aspect = world_size.x / world_size.y;
+        const float frame_aspect = framebuffer_size.x / framebuffer_size.y;
+
+        float viewport_width = framebuffer_size.x;
+        float viewport_height = framebuffer_size.y;
+
+        if (frame_aspect > world_aspect)
+        {
+            viewport_width = framebuffer_size.y * world_aspect;
+        }
+        else
+        {
+            viewport_height = framebuffer_size.x / world_aspect;
+        }
+
+        m_viewport_width = static_cast<int>(viewport_width);
+        m_viewport_height = static_cast<int>(viewport_height);
+        m_viewport_x = static_cast<int>((framebuffer_size.x - viewport_width) * 0.5f);
+        m_viewport_y = static_cast<int>((framebuffer_size.y - viewport_height) * 0.5f);
+
+        glViewport(m_viewport_x, m_viewport_y, m_viewport_width, m_viewport_height);
 
         unsigned int vao = 0;
         unsigned int vbo = 0;
@@ -152,8 +176,17 @@ void main()
 
     void Renderer::clear(core::Color color)
     {
+        // glClear ignores the viewport, so the bars would otherwise take the
+        // play area's colour. Black them out first, then scissor the clear to
+        // the viewport so the play area is visibly delimited.
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(m_viewport_x, m_viewport_y, m_viewport_width, m_viewport_height);
         glClearColor(color.r, color.g, color.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_SCISSOR_TEST);
     }
 
     void Renderer::draw_quad(math::Vec2 center, math::Vec2 size, core::Color color)

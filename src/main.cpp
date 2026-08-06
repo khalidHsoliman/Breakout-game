@@ -6,6 +6,9 @@
 
 namespace
 {
+    constexpr bool fullscreen = true;
+
+    // Ignored when fullscreen.
     constexpr int window_width = 800;
     constexpr int window_height = 600;
 
@@ -65,13 +68,13 @@ namespace
 int main()
 {
     platform::Window window;
-    if (!window.init(window_width, window_height, "Breakout"))
+    if (!window.init(window_width, window_height, "Breakout", fullscreen))
     {
         return 1;
     }
 
     platform::Renderer renderer;
-    if (!renderer.init(world_size))
+    if (!renderer.init(world_size, window.framebuffer_size()))
     {
         return 1;
     }

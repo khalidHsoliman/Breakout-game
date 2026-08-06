@@ -23,7 +23,11 @@ namespace platform
 
         // Compiles the shaders and creates the vertex buffers. Reports the
         // reason to stderr and returns false on failure.
-        bool init(math::Vec2 world_size);
+        //
+        // The viewport is the largest rectangle with the world's aspect ratio
+        // that fits the framebuffer, centred, so the world is never distorted
+        // by the shape of the display.
+        bool init(math::Vec2 world_size, math::Vec2 framebuffer_size);
 
         void begin_frame();
         void clear(core::Color color);
@@ -43,5 +47,10 @@ namespace platform
         unsigned int m_program = 0;
         unsigned int m_vao = 0;
         unsigned int m_vbo = 0;
+
+        int m_viewport_x = 0;
+        int m_viewport_y = 0;
+        int m_viewport_width = 0;
+        int m_viewport_height = 0;
     };
 }
