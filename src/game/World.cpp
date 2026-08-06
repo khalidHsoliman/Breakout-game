@@ -11,5 +11,6 @@ namespace game
     {
         transforms.remove(entity);
         colors.remove(entity);
+        circle_shapes.remove(entity);
     }
 }

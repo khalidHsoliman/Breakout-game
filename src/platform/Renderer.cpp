@@ -1,7 +1,9 @@
 #include <glad/gl.h>
 
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <numbers>
 
 #include "platform/Renderer.h"
 
@@ -216,6 +218,32 @@ void main()
         m_vertices.push_back(top_right);
         m_vertices.push_back(top_left);
         m_vertices.push_back(bottom_left);
+    }
+
+    void Renderer::draw_circle(math::Vec2 center, float radius, core::Color color, int segments)
+    {
+        if (segments < 3)
+        {
+            segments = 3;
+        }
+
+        const Vertex middle{center.x, center.y, color.r, color.g, color.b};
+        const float step = 2.0f * std::numbers::pi_v<float> / static_cast<float>(segments);
+
+        for (int i = 0; i < segments; ++i)
+        {
+            const float from = step * static_cast<float>(i);
+            const float to = step * static_cast<float>(i + 1);
+
+            // Wound counter-clockwise, matching draw_quad.
+            m_vertices.push_back(middle);
+            m_vertices.push_back(Vertex{center.x + std::cos(from) * radius,
+                                        center.y + std::sin(from) * radius,
+                                        color.r, color.g, color.b});
+            m_vertices.push_back(Vertex{center.x + std::cos(to) * radius,
+                                        center.y + std::sin(to) * radius,
+                                        color.r, color.g, color.b});
+        }
     }
 
     void Renderer::end_frame()

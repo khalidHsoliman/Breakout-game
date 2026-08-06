@@ -36,6 +36,7 @@ namespace platform
         void begin_frame();
         void clear(core::Color color);
         void draw_quad(math::Vec2 center, math::Vec2 size, core::Color color);
+        void draw_circle(math::Vec2 center, float radius, core::Color color, int segments = 24);
         void end_frame();
 
     private:

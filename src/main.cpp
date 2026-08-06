@@ -17,10 +17,10 @@ namespace
     // nothing in the game may rely on that.
     constexpr math::Vec2 world_size{800.0f, 600.0f};
 
-    core::Entity create_quad(game::World& world,
-                             math::Vec2 position,
-                             math::Vec2 size,
-                             core::Color color)
+    core::Entity spawn(game::World& world,
+                       math::Vec2 position,
+                       math::Vec2 size,
+                       core::Color color)
     {
         const core::Entity entity = world.create_entity();
         world.transforms.add(entity, game::Transform{position, size});
@@ -32,19 +32,21 @@ namespace
     // rules rather than just a position.
     void create_placeholder_scene(game::World& world)
     {
-        create_quad(world, math::Vec2{400.0f, 40.0f}, math::Vec2{120.0f, 20.0f},
-                    core::Color{0.9f, 0.9f, 0.9f});
+        spawn(world, math::Vec2{400.0f, 40.0f}, math::Vec2{120.0f, 20.0f},
+              core::Color{0.9f, 0.9f, 0.9f});
 
-        create_quad(world, math::Vec2{400.0f, 90.0f}, math::Vec2{16.0f, 16.0f},
-                    core::Color{0.95f, 0.65f, 0.25f});
+        const core::Entity ball = spawn(world, math::Vec2{400.0f, 90.0f},
+                                        math::Vec2{16.0f, 16.0f},
+                                        core::Color{0.95f, 0.65f, 0.25f});
+        world.circle_shapes.add(ball, game::CircleShape{});
 
         for (int column = 0; column < 8; ++column)
         {
             const float x = 50.0f + static_cast<float>(column) * 100.0f;
             const float green = 0.30f + static_cast<float>(column) * 0.07f;
 
-            create_quad(world, math::Vec2{x, 520.0f}, math::Vec2{90.0f, 30.0f},
-                        core::Color{0.85f, green, 0.35f});
+            spawn(world, math::Vec2{x, 520.0f}, math::Vec2{90.0f, 30.0f},
+                  core::Color{0.85f, green, 0.35f});
         }
     }
 
@@ -55,13 +57,21 @@ namespace
 
         for (std::size_t i = 0; i < transforms.size(); ++i)
         {
-            const core::Color* color = world.colors.find(entities[i]);
+            const core::Entity entity = entities[i];
+            const core::Color* color = world.colors.find(entity);
             if (color == nullptr)
             {
                 continue;
             }
 
-            renderer.draw_quad(transforms[i].position, transforms[i].size, *color);
+            if (world.circle_shapes.has(entity))
+            {
+                renderer.draw_circle(transforms[i].position, transforms[i].size.x * 0.5f, *color);
+            }
+            else
+            {
+                renderer.draw_quad(transforms[i].position, transforms[i].size, *color);
+            }
         }
     }
 }

@@ -23,6 +23,7 @@ namespace game
 
         core::ComponentStore<Transform> transforms;
         core::ComponentStore<core::Color> colors;
+        core::ComponentStore<CircleShape> circle_shapes;
 
     private:
         // Ids are never recycled, so a stale entity can never alias a new one.
