@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <array>
 #include <cstddef>
@@ -16,10 +16,13 @@ namespace platform
         Escape,
         ToggleFullscreen,
         MoveLeft,
-        MoveRight
+        MoveRight,
+        Launch,
+        Pause,
+        Restart
     };
 
-    inline constexpr std::size_t key_count = 4;
+    inline constexpr std::size_t key_count = 7;
 
     class Window
     {

@@ -36,12 +36,17 @@ namespace
 ..111111..
 )";
 
-    game::Input read_input(const platform::Window& window)
+    // Held state is overwritten each frame. One-shot actions are OR-ed in and
+    // survive until a step consumes them, because a frame can run zero steps
+    // (the press would be lost) or several (it would fire more than once).
+    void read_input(const platform::Window& window, game::Input& input)
     {
-        game::Input input;
         input.move_left = window.is_key_down(platform::Key::MoveLeft);
         input.move_right = window.is_key_down(platform::Key::MoveRight);
-        return input;
+
+        input.launch |= window.is_key_pressed(platform::Key::Launch);
+        input.toggle_pause |= window.is_key_pressed(platform::Key::Pause);
+        input.restart |= window.is_key_pressed(platform::Key::Restart);
     }
 
     void render_world(const game::World& world, platform::Renderer& renderer)
@@ -92,6 +97,7 @@ int main()
 
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
     float accumulator = 0.0f;
+    game::Input input;
 
     while (!window.should_close())
     {
@@ -112,12 +118,16 @@ int main()
         accumulator += std::chrono::duration<float>(now - previous).count();
         previous = now;
 
-        const game::Input input = read_input(window);
+        read_input(window, input);
 
         int steps = 0;
         while (accumulator >= fixed_dt && steps < max_steps_per_frame)
         {
             game::step(world, input, fixed_dt);
+
+            // Consumed. Held state is refreshed next frame regardless.
+            input.clear_one_shots();
+
             accumulator -= fixed_dt;
             ++steps;
         }

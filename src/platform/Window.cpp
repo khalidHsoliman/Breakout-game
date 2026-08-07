@@ -1,4 +1,4 @@
-#include <glad/gl.h>
+﻿#include <glad/gl.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -30,6 +30,12 @@ namespace platform
                 return GLFW_KEY_LEFT;
             case Key::MoveRight:
                 return GLFW_KEY_RIGHT;
+            case Key::Launch:
+                return GLFW_KEY_SPACE;
+            case Key::Pause:
+                return GLFW_KEY_P;
+            case Key::Restart:
+                return GLFW_KEY_R;
             }
             return GLFW_KEY_UNKNOWN;
         }
