@@ -1,4 +1,4 @@
-include(FetchContent)
+﻿include(FetchContent)
 
 FetchContent_Declare(googletest
     URL      https://github.com/google/googletest/archive/refs/tags/v1.15.2.tar.gz
@@ -15,7 +15,8 @@ add_executable(breakout_tests
     math_tests.cpp
     component_store_tests.cpp
     world_tests.cpp
-    collision_tests.cpp)
+    collision_tests.cpp
+    systems_tests.cpp)
 
 target_link_libraries(breakout_tests PRIVATE
     GTest::gtest_main

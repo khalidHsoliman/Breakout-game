@@ -14,10 +14,12 @@ namespace platform
     enum class Key
     {
         Escape,
-        ToggleFullscreen
+        ToggleFullscreen,
+        MoveLeft,
+        MoveRight
     };
 
-    inline constexpr std::size_t key_count = 2;
+    inline constexpr std::size_t key_count = 4;
 
     class Window
     {

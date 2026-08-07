@@ -109,6 +109,8 @@ void main()
             return false;
         }
 
+        glEnable(GL_MULTISAMPLE);
+
         m_world_size = world_size;
         set_viewport(framebuffer_size);
 

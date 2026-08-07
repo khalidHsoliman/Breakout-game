@@ -26,6 +26,10 @@ namespace platform
                 return GLFW_KEY_ESCAPE;
             case Key::ToggleFullscreen:
                 return GLFW_KEY_F11;
+            case Key::MoveLeft:
+                return GLFW_KEY_LEFT;
+            case Key::MoveRight:
+                return GLFW_KEY_RIGHT;
             }
             return GLFW_KEY_UNKNOWN;
         }
@@ -47,6 +51,10 @@ namespace platform
 
         // Fixed size: nothing updates the GL viewport on resize.
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+        // The quads are axis-aligned and alias-free, but the ball's edges are
+        // diagonal. Four samples per pixel is what smooths them.
+        glfwWindowHint(GLFW_SAMPLES, 4);
 
         GLFWmonitor* monitor = nullptr;
         int create_width = width;
