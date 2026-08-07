@@ -26,8 +26,7 @@ namespace
     // steps the leftover time is dropped instead.
     constexpr int max_steps_per_frame = 5;
 
-    // Digits are hit points; anything else is an empty cell. On Day 6 the same
-    // parser reads this from a file the editor writes.
+    // Digits are hit points; anything else is an empty cell.
     constexpr const char* first_level = R"(
 ..111111..
 .12222221.
@@ -91,9 +90,7 @@ int main()
 
     game::World world;
     world.size = world_size;
-    game::spawn_paddle(world);
-    game::spawn_ball(world);
-    game::spawn_level(world, game::parse_level(first_level));
+    game::start_game(world, game::parse_level(first_level));
 
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
     float accumulator = 0.0f;

@@ -6,22 +6,29 @@
 #include "core/ComponentStore.h"
 #include "core/Entity.h"
 #include "game/Components.h"
+#include "game/Level.h"
 #include "math/Vec2.h"
 
 namespace game
 {
     inline constexpr int starting_lives = 3;
 
-    // Owns the entities and every component store. The stores are named members
-    // rather than a type-erased map: there are only a handful of component
-    // types, all known at compile time, so this file doubles as the data model.
+    enum class GameState
+    {
+        Ready,      // ball held on the paddle, waiting to launch
+        Playing,
+        Paused,
+        GameOver,   // out of lives
+        Won         // no bricks left
+    };
+
+    // Owns the entities and every component store.
     class World
     {
     public:
         core::Entity create_entity();
 
-        // Removes the entity from every store. Adding a store below means
-        // adding a line here too.
+        // Removes the entity from every store.
         void destroy_entity(core::Entity entity);
 
         // The play area, in world units. Nothing here is measured in pixels.
@@ -31,6 +38,10 @@ namespace game
         // component store holding a single entry.
         int score = 0;
         int lives = starting_lives;
+        GameState state = GameState::Ready;
+
+        // Kept so a restart can rebuild without main handing it back
+        Level level;
 
         core::ComponentStore<Transform> transforms;
         core::ComponentStore<core::Color> colors;

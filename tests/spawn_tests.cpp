@@ -91,7 +91,7 @@ TEST(SpawnLevel, AnEmptyLevelSpawnsNothing)
     EXPECT_EQ(world.bricks.size(), 0u);
 }
 
-TEST(SpawnBall, StartsInsideThePlayAreaMovingUpward)
+TEST(SpawnBall, StartsHeldInsideThePlayArea)
 {
     game::World world = make_world();
 
@@ -101,8 +101,42 @@ TEST(SpawnBall, StartsInsideThePlayAreaMovingUpward)
     ASSERT_NE(transform, nullptr);
     EXPECT_GT(transform->position.y, 0.0f);
     EXPECT_LT(transform->position.y, world.size.y);
-    EXPECT_GT(world.velocities.find(ball)->value.y, 0.0f);
     EXPECT_TRUE(world.circle_shapes.has(ball));
+
+    // Held until launched, so it must not be moving.
+    EXPECT_FLOAT_EQ(math::length(world.velocities.find(ball)->value), 0.0f);
+}
+
+TEST(LaunchBall, GivesTheBallAnUpwardVelocity)
+{
+    game::World world = make_world();
+    const core::Entity ball = game::spawn_ball(world);
+
+    game::launch_ball(world, ball);
+
+    EXPECT_GT(world.velocities.find(ball)->value.y, 0.0f);
+    EXPECT_GT(math::length(world.velocities.find(ball)->value), 0.0f);
+}
+
+TEST(StartGame, RebuildsEverythingFromScratch)
+{
+    game::World world = make_world();
+    game::start_game(world, game::parse_level(diamond));
+
+    const std::size_t bricks_before = world.bricks.size();
+    world.score = 500;
+    world.lives = 1;
+    world.state = game::GameState::GameOver;
+    world.destroy_entity(world.bricks.entities()[0]);
+
+    game::start_game(world, world.level);
+
+    EXPECT_EQ(world.bricks.size(), bricks_before);
+    EXPECT_EQ(world.score, 0);
+    EXPECT_EQ(world.lives, game::starting_lives);
+    EXPECT_EQ(world.state, game::GameState::Ready);
+    EXPECT_EQ(world.paddles.size(), 1u);
+    EXPECT_EQ(world.balls.size(), 1u);
 }
 
 // If two toughness levels shared a colour, re-colouring on damage would be

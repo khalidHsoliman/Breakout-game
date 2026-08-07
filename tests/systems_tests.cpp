@@ -12,6 +12,7 @@ namespace
     {
         game::World world;
         world.size = math::Vec2{800.0f, 600.0f};
+        world.state = game::GameState::Playing;
         return world;
     }
 
@@ -261,7 +262,7 @@ TEST(Step, BouncingOffWallsPreservesSpeed)
     EXPECT_NEAR(math::length(world.velocities.find(ball)->value), initial_speed, 1e-2f);
 }
 
-TEST(Lifecycle, FallingPastTheFloorCostsALifeAndResetsTheBall)
+TEST(Lifecycle, FallingPastTheFloorCostsALifeAndReturnsToReady)
 {
     game::World world = make_world();
     add_paddle(world, math::Vec2{400.0f, 40.0f});
@@ -271,8 +272,23 @@ TEST(Lifecycle, FallingPastTheFloorCostsALifeAndResetsTheBall)
     game::lifecycle_system(world);
 
     EXPECT_EQ(world.lives, lives_before - 1);
-    EXPECT_GT(world.transforms.find(ball)->position.y, 0.0f);
-    EXPECT_GT(world.velocities.find(ball)->value.y, 0.0f);
+    EXPECT_EQ(world.state, game::GameState::Ready);
+
+    // The ball is held; serve_system parks it back on the paddle.
+    EXPECT_FLOAT_EQ(math::length(world.velocities.find(ball)->value), 0.0f);
+}
+
+TEST(Lifecycle, LosingTheLastLifeIsGameOver)
+{
+    game::World world = make_world();
+    world.lives = 1;
+    add_paddle(world, math::Vec2{400.0f, 40.0f});
+    add_ball(world, math::Vec2{400.0f, -20.0f}, math::Vec2{0.0f, -200.0f});
+
+    game::lifecycle_system(world);
+
+    EXPECT_EQ(world.lives, 0);
+    EXPECT_EQ(world.state, game::GameState::GameOver);
 }
 
 TEST(Lifecycle, ABallStillInPlayCostsNothing)

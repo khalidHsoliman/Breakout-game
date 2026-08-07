@@ -60,25 +60,46 @@ namespace game
         world.colors.add(entity, core::Color{0.95f, 0.65f, 0.25f});
         world.circle_shapes.add(entity, CircleShape{});
         world.balls.add(entity, Ball{ball_radius});
-        world.velocities.add(entity, Velocity{});
 
-        reset_ball(world, entity);
+        // Starts held, with no velocity. serve_system parks it on the paddle
+        // until the player launches.
+        world.velocities.add(entity, Velocity{});
+        world.transforms.find(entity)->position =
+            math::Vec2{world.size.x * 0.5f, ball_start_y};
+
         return entity;
     }
 
-    void reset_ball(World& world, core::Entity ball)
+    void launch_ball(World& world, core::Entity ball)
     {
-        Transform* transform = world.transforms.find(ball);
         Velocity* velocity = world.velocities.find(ball);
-        if (transform == nullptr || velocity == nullptr)
+        if (velocity == nullptr)
         {
             return;
         }
 
-        transform->position = math::Vec2{world.size.x * 0.5f, ball_start_y};
-
         // Off vertical, so the opening shot is not a straight up-down bounce.
         velocity->value = math::normalize(math::Vec2{0.45f, 1.0f}) * ball_speed;
+    }
+
+    void start_game(World& world, const Level& level)
+    {
+        // Copied first: destroy_entity mutates the store being read. Every
+        // entity in this game has a Transform, so this reaches all of them.
+        const std::vector<core::Entity> all = world.transforms.entities();
+        for (const core::Entity entity : all)
+        {
+            world.destroy_entity(entity);
+        }
+
+        world.level = level;
+        world.score = 0;
+        world.lives = starting_lives;
+        world.state = GameState::Ready;
+
+        spawn_paddle(world);
+        spawn_ball(world);
+        spawn_level(world, world.level);
     }
 
     void spawn_level(World& world, const Level& level)

@@ -21,6 +21,10 @@ namespace game
 
         constexpr int points_per_hit = 10;
 
+        // Gap between the paddle's top and a held ball, so they do not collide
+        // the instant it launches.
+        constexpr float serve_gap = 2.0f;
+
         math::AABB bounds_of(const Transform& transform)
         {
             const math::Vec2 half = transform.size * 0.5f;
@@ -238,14 +242,82 @@ namespace game
             }
 
             world.lives -= 1;
-            if (world.lives <= 0)
+
+            Velocity* velocity = world.velocities.find(entity);
+            if (velocity != nullptr)
             {
-                // Temporary: proper game over arrives with the Day 5 state
-                // machine. Keeping it playable matters more today.
-                world.lives = starting_lives;
+                velocity->value = math::Vec2{};
             }
 
-            reset_ball(world, entity);
+            world.state = (world.lives <= 0) ? GameState::GameOver : GameState::Ready;
+        }
+    }
+
+    void win_system(World& world)
+    {
+        if (world.bricks.size() == 0)
+        {
+            world.state = GameState::Won;
+        }
+    }
+
+    void serve_system(World& world, const Input& input)
+    {
+        const Transform* paddle = nullptr;
+        if (world.paddles.size() > 0)
+        {
+            paddle = world.transforms.find(world.paddles.entities()[0]);
+        }
+
+        const std::vector<core::Entity>& entities = world.balls.entities();
+        const std::vector<Ball>& balls = world.balls.components();
+
+        for (std::size_t i = 0; i < balls.size(); ++i)
+        {
+            Transform* transform = world.transforms.find(entities[i]);
+            if (transform == nullptr || paddle == nullptr)
+            {
+                continue;
+            }
+
+            // Parked on the paddle, so moving the paddle aims the shot.
+            transform->position = math::Vec2{
+                paddle->position.x,
+                paddle->position.y + paddle->size.y * 0.5f + balls[i].radius + serve_gap};
+        }
+
+        if (!input.launch)
+        {
+            return;
+        }
+
+        for (std::size_t i = 0; i < balls.size(); ++i)
+        {
+            launch_ball(world, entities[i]);
+        }
+        world.state = GameState::Playing;
+    }
+
+    void transition_system(World& world, const Input& input)
+    {
+        if (input.restart && (world.state == GameState::GameOver || world.state == GameState::Won))
+        {
+            start_game(world, world.level);
+            return;
+        }
+
+        if (!input.toggle_pause)
+        {
+            return;
+        }
+
+        if (world.state == GameState::Playing)
+        {
+            world.state = GameState::Paused;
+        }
+        else if (world.state == GameState::Paused)
+        {
+            world.state = GameState::Playing;
         }
     }
 
@@ -262,10 +334,29 @@ namespace game
 
     void step(World& world, const Input& input, float dt)
     {
-        paddle_system(world, input, dt);
-        movement_system(world, dt);
-        collision_system(world);
-        lifecycle_system(world);
-        sweep_destroyed(world);
+        // Runs first and in every state
+        transition_system(world, input);
+
+        switch (world.state)
+        {
+        case GameState::Ready:
+            paddle_system(world, input, dt);
+            serve_system(world, input);
+            break;
+
+        case GameState::Playing:
+            paddle_system(world, input, dt);
+            movement_system(world, dt);
+            collision_system(world);
+            lifecycle_system(world);
+            win_system(world);
+            sweep_destroyed(world);
+            break;
+
+        case GameState::Paused:
+        case GameState::GameOver:
+        case GameState::Won:
+            break;
+        }
     }
 }
