@@ -1,9 +1,11 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <cstddef>
 #include <numbers>
 #include <vector>
 
 #include "math/Collision.h"
+
+#include "game/Spawn.h"
 
 #include "game/Systems.h"
 
@@ -16,6 +18,8 @@ namespace game
         constexpr float push_out_tolerance = 0.01f;
 
         constexpr float max_bounce_angle = std::numbers::pi_v<float> / 3.0f;
+
+        constexpr int points_per_hit = 10;
 
         math::AABB bounds_of(const Transform& transform)
         {
@@ -42,12 +46,8 @@ namespace game
                 velocity.value = math::reflect(velocity.value, math::Vec2{0.0f, -1.0f});
             }
 
-            // Temporary: the floor should cost a life. Day 4 replaces this.
-            if (transform.position.y - radius < 0.0f)
-            {
-                transform.position.y = radius + push_out_tolerance;
-                velocity.value = math::reflect(velocity.value, math::Vec2{0.0f, 1.0f});
-            }
+            // No floor: falling past the bottom costs a life, which is
+            // lifecycle_system's job rather than a collision.
         }
 
         void bounce_off_paddles(const World& world, Transform& transform, Velocity& velocity, float radius)
@@ -126,9 +126,20 @@ namespace game
             if (brick != nullptr)
             {
                 brick->hit_points -= 1;
+
+                // Per hit rather than per brick, so a tough brick is worth more
+                // without needing to remember what it started at.
+                world.score += points_per_hit;
+
                 if (brick->hit_points <= 0)
                 {
                     world.destroyed.add(hit_entity, Destroyed{});
+                }
+                else if (core::Color* color = world.colors.find(hit_entity); color != nullptr)
+                {
+                    // Re-colour to the remaining toughness, so a damaged brick
+                    // stops claiming to be as tough as it was.
+                    *color = brick_color(brick->hit_points);
                 }
             }
         }
@@ -206,6 +217,38 @@ namespace game
         }
     }
 
+    void lifecycle_system(World& world)
+    {
+        const std::vector<core::Entity>& entities = world.balls.entities();
+        const std::vector<Ball>& balls = world.balls.components();
+
+        for (std::size_t i = 0; i < balls.size(); ++i)
+        {
+            const core::Entity entity = entities[i];
+
+            const Transform* transform = world.transforms.find(entity);
+            if (transform == nullptr)
+            {
+                continue;
+            }
+
+            if (transform->position.y + balls[i].radius >= 0.0f)
+            {
+                continue;
+            }
+
+            world.lives -= 1;
+            if (world.lives <= 0)
+            {
+                // Temporary: proper game over arrives with the Day 5 state
+                // machine. Keeping it playable matters more today.
+                world.lives = starting_lives;
+            }
+
+            reset_ball(world, entity);
+        }
+    }
+
     void sweep_destroyed(World& world)
     {
         // Copied first: destroy_entity mutates the store being read.
@@ -222,6 +265,7 @@ namespace game
         paddle_system(world, input, dt);
         movement_system(world, dt);
         collision_system(world);
+        lifecycle_system(world);
         sweep_destroyed(world);
     }
 }

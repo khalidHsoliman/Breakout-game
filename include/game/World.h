@@ -10,6 +10,8 @@
 
 namespace game
 {
+    inline constexpr int starting_lives = 3;
+
     // Owns the entities and every component store. The stores are named members
     // rather than a type-erased map: there are only a handful of component
     // types, all known at compile time, so this file doubles as the data model.
@@ -24,6 +26,11 @@ namespace game
 
         // The play area, in world units. Nothing here is measured in pixels.
         math::Vec2 size;
+
+        // Singletons: exactly one of each, so plain members rather than a
+        // component store holding a single entry.
+        int score = 0;
+        int lives = starting_lives;
 
         core::ComponentStore<Transform> transforms;
         core::ComponentStore<core::Color> colors;

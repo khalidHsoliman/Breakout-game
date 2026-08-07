@@ -1,6 +1,7 @@
 ﻿#include <chrono>
 #include <cstddef>
 
+#include "game/Spawn.h"
 #include "game/Systems.h"
 #include "platform/Renderer.h"
 #include "platform/Window.h"
@@ -25,48 +26,15 @@ namespace
     // steps the leftover time is dropped instead.
     constexpr int max_steps_per_frame = 5;
 
-    core::Entity spawn(game::World& world,
-                       math::Vec2 position,
-                       math::Vec2 size,
-                       core::Color color)
-    {
-        const core::Entity entity = world.create_entity();
-        world.transforms.add(entity, game::Transform{position, size});
-        world.colors.add(entity, color);
-        return entity;
-    }
-
-    // Temporary scaffolding. Level layout becomes data on Day 4.
-    void create_placeholder_scene(game::World& world)
-    {
-        const core::Entity paddle = spawn(world, math::Vec2{400.0f, 40.0f},
-                                          math::Vec2{120.0f, 20.0f},
-                                          core::Color{0.90f, 0.90f, 0.90f});
-        world.paddles.add(paddle, game::Paddle{520.0f});
-
-        const float ball_radius = 8.0f;
-        const core::Entity ball = spawn(world, math::Vec2{400.0f, 120.0f},
-                                        math::Vec2{ball_radius * 2.0f, ball_radius * 2.0f},
-                                        core::Color{0.95f, 0.65f, 0.25f});
-        world.circle_shapes.add(ball, game::CircleShape{});
-        world.balls.add(ball, game::Ball{ball_radius});
-        world.velocities.add(ball, game::Velocity{math::Vec2{180.0f, 300.0f}});
-
-        for (int row = 0; row < 4; ++row)
-        {
-            for (int column = 0; column < 8; ++column)
-            {
-                const float x = 50.0f + static_cast<float>(column) * 100.0f;
-                const float y = 560.0f - static_cast<float>(row) * 40.0f;
-                const float green = 0.25f + static_cast<float>(column) * 0.07f;
-
-                const core::Entity brick = spawn(world, math::Vec2{x, y},
-                                                 math::Vec2{90.0f, 30.0f},
-                                                 core::Color{0.85f, green, 0.35f});
-                world.bricks.add(brick, game::Brick{1});
-            }
-        }
-    }
+    // Digits are hit points; anything else is an empty cell. On Day 6 the same
+    // parser reads this from a file the editor writes.
+    constexpr const char* first_level = R"(
+..111111..
+.12222221.
+1233333321
+.12222221.
+..111111..
+)";
 
     game::Input read_input(const platform::Window& window)
     {
@@ -118,7 +86,9 @@ int main()
 
     game::World world;
     world.size = world_size;
-    create_placeholder_scene(world);
+    game::spawn_paddle(world);
+    game::spawn_ball(world);
+    game::spawn_level(world, game::parse_level(first_level));
 
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
     float accumulator = 0.0f;

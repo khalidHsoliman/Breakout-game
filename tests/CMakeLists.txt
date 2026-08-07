@@ -16,7 +16,9 @@ add_executable(breakout_tests
     component_store_tests.cpp
     world_tests.cpp
     collision_tests.cpp
-    systems_tests.cpp)
+    systems_tests.cpp
+    level_tests.cpp
+    spawn_tests.cpp)
 
 target_link_libraries(breakout_tests PRIVATE
     GTest::gtest_main

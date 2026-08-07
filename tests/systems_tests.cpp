@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
+﻿#include <gtest/gtest.h>
 
+#include "game/Spawn.h"
 #include "game/Systems.h"
 
 namespace
@@ -224,14 +225,13 @@ TEST(Step, IsDeterministic)
     EXPECT_FLOAT_EQ(first.y, second.y);
 }
 
-// Ten seconds of bouncing must not let the ball leak energy or escape.
-TEST(Step, BallStaysInsideThePlayAreaAndKeepsItsSpeed)
+// Ten seconds of play must never let the ball out of the play area, whether it
+// is bouncing or being reset after a miss.
+TEST(Step, BallNeverEscapesThePlayArea)
 {
     game::World world = make_world();
     add_paddle(world, math::Vec2{400.0f, 40.0f});
     const core::Entity ball = add_ball(world, math::Vec2{400.0f, 300.0f}, math::Vec2{213.0f, -317.0f});
-
-    const float initial_speed = math::length(world.velocities.find(ball)->value);
 
     for (int i = 0; i < 600; ++i)
     {
@@ -240,9 +240,77 @@ TEST(Step, BallStaysInsideThePlayAreaAndKeepsItsSpeed)
         const math::Vec2 position = world.transforms.find(ball)->position;
         ASSERT_GE(position.x, 0.0f) << "escaped left at step " << i;
         ASSERT_LE(position.x, world.size.x) << "escaped right at step " << i;
-        ASSERT_GE(position.y, 0.0f) << "escaped bottom at step " << i;
         ASSERT_LE(position.y, world.size.y) << "escaped top at step " << i;
+    }
+}
+
+// Reflection off walls and the ceiling must not let the ball gain or bleed
+// energy. Aimed upward so it never reaches the floor and gets reset.
+TEST(Step, BouncingOffWallsPreservesSpeed)
+{
+    game::World world = make_world();
+    const core::Entity ball = add_ball(world, math::Vec2{400.0f, 300.0f}, math::Vec2{280.0f, 210.0f});
+
+    const float initial_speed = math::length(world.velocities.find(ball)->value);
+
+    for (int i = 0; i < 120; ++i)
+    {
+        game::step(world, game::Input{}, dt);
     }
 
     EXPECT_NEAR(math::length(world.velocities.find(ball)->value), initial_speed, 1e-2f);
+}
+
+TEST(Lifecycle, FallingPastTheFloorCostsALifeAndResetsTheBall)
+{
+    game::World world = make_world();
+    add_paddle(world, math::Vec2{400.0f, 40.0f});
+    const core::Entity ball = add_ball(world, math::Vec2{400.0f, -20.0f}, math::Vec2{0.0f, -200.0f});
+
+    const int lives_before = world.lives;
+    game::lifecycle_system(world);
+
+    EXPECT_EQ(world.lives, lives_before - 1);
+    EXPECT_GT(world.transforms.find(ball)->position.y, 0.0f);
+    EXPECT_GT(world.velocities.find(ball)->value.y, 0.0f);
+}
+
+TEST(Lifecycle, ABallStillInPlayCostsNothing)
+{
+    game::World world = make_world();
+    add_ball(world, math::Vec2{400.0f, 300.0f}, math::Vec2{0.0f, -200.0f});
+
+    game::lifecycle_system(world);
+
+    EXPECT_EQ(world.lives, game::starting_lives);
+}
+
+TEST(Scoring, DamagingABrickRecolorsItToTheRemainingToughness)
+{
+    game::World world = make_world();
+    const core::Entity brick = add_brick(world, math::Vec2{400.0f, 500.0f}, 3);
+    world.colors.add(brick, game::brick_color(3));
+    add_ball(world, math::Vec2{400.0f, 482.0f}, math::Vec2{0.0f, 200.0f});
+
+    game::collision_system(world);
+
+    ASSERT_EQ(world.bricks.find(brick)->hit_points, 2);
+
+    const core::Color expected = game::brick_color(2);
+    const core::Color* actual = world.colors.find(brick);
+    ASSERT_NE(actual, nullptr);
+    EXPECT_FLOAT_EQ(actual->r, expected.r);
+    EXPECT_FLOAT_EQ(actual->g, expected.g);
+    EXPECT_FLOAT_EQ(actual->b, expected.b);
+}
+
+TEST(Scoring, EachHitScores)
+{
+    game::World world = make_world();
+    add_brick(world, math::Vec2{400.0f, 500.0f}, 2);
+    add_ball(world, math::Vec2{400.0f, 482.0f}, math::Vec2{0.0f, 200.0f});
+
+    EXPECT_EQ(world.score, 0);
+    game::collision_system(world);
+    EXPECT_GT(world.score, 0);
 }
