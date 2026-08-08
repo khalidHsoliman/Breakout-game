@@ -9,7 +9,9 @@ add_library(breakout_game STATIC
     game/World.cpp
     game/Systems.cpp
     game/Level.cpp
-    game/Spawn.cpp)
+    game/Spawn.cpp
+    game/LevelLayout.cpp
+    game/Editor.cpp)
 
 target_include_directories(breakout_game PUBLIC "${CMAKE_SOURCE_DIR}/include")
 target_link_libraries(breakout_game

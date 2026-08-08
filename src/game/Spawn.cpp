@@ -1,3 +1,4 @@
+#include "game/LevelLayout.h"
 #include "game/Spawn.h"
 
 namespace game
@@ -12,11 +13,6 @@ namespace game
         constexpr float BALL_RADIUS = 8.0f;
         constexpr float BALL_SPEED = 350.0f;
         constexpr float BALL_START_Y = 120.0f;
-
-        constexpr float BRICK_SIDE_MARGIN = 20.0f;
-        constexpr float BRICK_TOP_MARGIN = 40.0f;
-        constexpr float BRICK_HEIGHT = 24.0f;
-        constexpr float BRICK_GAP = 4.0f;
 
     }
 
@@ -109,9 +105,7 @@ namespace game
             return;
         }
 
-        const float usable_width = world.size.x - 2.0f * BRICK_SIDE_MARGIN;
-        const float cell_width = usable_width / static_cast<float>(level.columns);
-        const float cell_height = BRICK_HEIGHT + BRICK_GAP;
+        const math::Vec2 size = brick_size(level, world.size);
 
         for (int row = 0; row < level.rows; ++row)
         {
@@ -123,14 +117,10 @@ namespace game
                     continue;
                 }
 
-                const float x = BRICK_SIDE_MARGIN + (static_cast<float>(column) + 0.5f) * cell_width;
-                const float y = world.size.y - BRICK_TOP_MARGIN -
-                                (static_cast<float>(row) + 0.5f) * cell_height;
-
                 const core::Entity entity = world.create_entity();
 
-                world.transforms.add(entity, Transform{math::Vec2{x, y},
-                                                       math::Vec2{cell_width - BRICK_GAP, BRICK_HEIGHT}});
+                world.transforms.add(
+                    entity, Transform{brick_center(level, world.size, column, row), size});
                 world.colors.add(entity, brick_color(hit_points));
                 world.bricks.add(entity, Brick{hit_points});
             }
