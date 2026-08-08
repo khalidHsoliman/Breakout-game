@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "game/Input.h"
 #include "game/World.h"

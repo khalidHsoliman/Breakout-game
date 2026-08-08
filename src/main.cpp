@@ -1,4 +1,4 @@
-﻿#include <chrono>
+#include <chrono>
 #include <cstddef>
 #include <filesystem>
 #include <string>
@@ -337,4 +337,3 @@ int main()
 
     return 0;
 }
-
