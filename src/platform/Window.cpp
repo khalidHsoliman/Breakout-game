@@ -39,6 +39,18 @@ namespace platform
             }
             return GLFW_KEY_UNKNOWN;
         }
+
+        int to_glfw_button(MouseButton button)
+        {
+            switch (button)
+            {
+            case MouseButton::Left:
+                return GLFW_MOUSE_BUTTON_LEFT;
+            case MouseButton::Right:
+                return GLFW_MOUSE_BUTTON_RIGHT;
+            }
+            return GLFW_MOUSE_BUTTON_LEFT;
+        }
     }
 
     bool Window::init(int width, int height, const char* title, bool fullscreen)
@@ -208,6 +220,11 @@ namespace platform
             m_previous_key_state[i] = is_key_down(static_cast<Key>(i));
         }
 
+        for (std::size_t i = 0; i < MOUSE_BUTTON_COUNT; ++i)
+        {
+            m_previous_mouse_state[i] = is_mouse_down(static_cast<MouseButton>(i));
+        }
+
         glfwPollEvents();
     }
 
@@ -224,5 +241,42 @@ namespace platform
     bool Window::is_key_pressed(Key key) const
     {
         return is_key_down(key) && !m_previous_key_state[static_cast<std::size_t>(key)];
+    }
+
+    math::Vec2 Window::cursor_pixel() const
+    {
+        double x = 0.0;
+        double y = 0.0;
+        glfwGetCursorPos(m_handle, &x, &y);
+
+        // GLFW reports the cursor in window coordinates and the framebuffer in
+        // pixels. They differ under DPI scaling, so the cursor has to be scaled
+        // before it means anything to the viewport.
+        int window_width = 0;
+        int window_height = 0;
+        glfwGetWindowSize(m_handle, &window_width, &window_height);
+
+        if (window_width <= 0 || window_height <= 0)
+        {
+            return math::Vec2{};
+        }
+
+        int buffer_width = 0;
+        int buffer_height = 0;
+        glfwGetFramebufferSize(m_handle, &buffer_width, &buffer_height);
+
+        return math::Vec2{
+            static_cast<float>(x) * static_cast<float>(buffer_width) / static_cast<float>(window_width),
+            static_cast<float>(y) * static_cast<float>(buffer_height) / static_cast<float>(window_height)};
+    }
+
+    bool Window::is_mouse_down(MouseButton button) const
+    {
+        return glfwGetMouseButton(m_handle, to_glfw_button(button)) == GLFW_PRESS;
+    }
+
+    bool Window::is_mouse_pressed(MouseButton button) const
+    {
+        return is_mouse_down(button) && !m_previous_mouse_state[static_cast<std::size_t>(button)];
     }
 }

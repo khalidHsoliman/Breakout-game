@@ -24,6 +24,14 @@ namespace platform
 
     inline constexpr std::size_t KEY_COUNT = 7;
 
+    enum class MouseButton
+    {
+        Left,
+        Right
+    };
+
+    inline constexpr std::size_t MOUSE_BUTTON_COUNT = 2;
+
     class Window
     {
     public:
@@ -62,10 +70,17 @@ namespace platform
         // stays true for as long as the key is held.
         bool is_key_pressed(Key key) const;
 
+        // In framebuffer pixels from the top-left.
+        math::Vec2 cursor_pixel() const;
+
+        bool is_mouse_down(MouseButton button) const;
+        bool is_mouse_pressed(MouseButton button) const;
+
     private:
         GLFWwindow* m_handle = nullptr;
 
         std::array<bool, KEY_COUNT> m_previous_key_state{};
+        std::array<bool, MOUSE_BUTTON_COUNT> m_previous_mouse_state{};
 
         bool m_fullscreen = false;
 
