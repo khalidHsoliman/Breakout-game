@@ -35,7 +35,7 @@ it works offline - use the `vs2022-x64-notests` preset instead.
 ctest --test-dir build -C Debug
 ```
 
-154 tests, green in both Debug and Release. CI runs both configurations on every
+158 tests, green in both Debug and Release. CI runs both configurations on every
 push.
 
 ## Controls

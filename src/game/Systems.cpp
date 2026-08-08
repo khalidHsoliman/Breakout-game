@@ -88,6 +88,18 @@ namespace game
             }
         }
 
+        void speed_up(Velocity& velocity)
+        {
+            const float speed = math::length(velocity.value);
+            if (speed <= 0.0f)
+            {
+                return;
+            }
+
+            const float faster = std::min(speed + BALL_SPEED_PER_HIT, MAX_BALL_SPEED);
+            velocity.value = math::normalize(velocity.value) * faster;
+        }
+
         void bounce_off_bricks(World& world, Transform& transform, Velocity& velocity, float radius)
         {
             const math::Circle ball{transform.position, radius};
@@ -134,6 +146,9 @@ namespace game
                 brick->hit_points -= 1;
 
                 world.events.push_back(GameEvent::BrickHit);
+
+                // Per brick hit
+                speed_up(velocity);
 
                 // Per hit rather than per brick, so a tough brick is worth more
                 // without needing to remember what it started at.

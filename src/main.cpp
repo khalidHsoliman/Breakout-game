@@ -33,9 +33,6 @@ namespace
     // nothing in the game may rely on that.
     constexpr math::Vec2 WORLD_SIZE{800.0f, 600.0f};
 
-    // The game always advances in these increments, whatever the frame rate.
-    constexpr float FIXED_DT = 1.0f / 60.0f;
-
     // A long stall must not queue up seconds of catch-up work: past this many
     // steps the leftover time is dropped instead.
     constexpr int MAX_STEPS_PER_FRAME = 5;
@@ -329,14 +326,14 @@ int main()
             read_input(window, input);
 
             int steps = 0;
-            while (accumulator >= FIXED_DT && steps < MAX_STEPS_PER_FRAME)
+            while (accumulator >= game::FIXED_DT && steps < MAX_STEPS_PER_FRAME)
             {
-                game::step(world, input, FIXED_DT);
+                game::step(world, input, game::FIXED_DT);
 
                 // Consumed. Held state is refreshed next frame regardless.
                 input.clear_one_shots();
 
-                accumulator -= FIXED_DT;
+                accumulator -= game::FIXED_DT;
                 ++steps;
             }
 
