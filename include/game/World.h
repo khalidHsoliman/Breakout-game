@@ -1,11 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "core/Color.h"
 #include "core/ComponentStore.h"
 #include "core/Entity.h"
 #include "game/Components.h"
+#include "game/Events.h"
 #include "game/Level.h"
 #include "math/Vec2.h"
 
@@ -42,6 +44,9 @@ namespace game
 
         // Kept so a restart can rebuild without main handing it back
         Level level;
+
+        // raised by systems during a step, consumed by main once per frame.
+        std::vector<GameEvent> events;
 
         core::ComponentStore<Transform> transforms;
         core::ComponentStore<core::Color> colors;

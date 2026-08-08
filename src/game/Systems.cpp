@@ -54,7 +54,7 @@ namespace game
             // lifecycle_system's job rather than a collision.
         }
 
-        void bounce_off_paddles(const World& world, Transform& transform, Velocity& velocity, float radius)
+        void bounce_off_paddles(World& world, Transform& transform, Velocity& velocity, float radius)
         {
             const math::Circle ball{transform.position, radius};
             const std::vector<core::Entity>& entities = world.paddles.entities();
@@ -82,6 +82,8 @@ namespace game
                 const float speed = math::length(velocity.value);
 
                 velocity.value = math::paddle_bounce_direction(offset, MAX_BOUNCE_ANGLE) * speed;
+
+                world.events.push_back(GameEvent::PaddleBounce);
                 return;
             }
         }
@@ -130,6 +132,8 @@ namespace game
             if (brick != nullptr)
             {
                 brick->hit_points -= 1;
+
+                world.events.push_back(GameEvent::BrickHit);
 
                 // Per hit rather than per brick, so a tough brick is worth more
                 // without needing to remember what it started at.

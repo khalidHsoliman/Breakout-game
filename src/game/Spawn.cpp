@@ -96,6 +96,7 @@ namespace game
         world.score = 0;
         world.lives = STARTING_LIVES;
         world.state = GameState::Ready;
+        world.events.clear();
 
         spawn_paddle(world);
         spawn_ball(world);
