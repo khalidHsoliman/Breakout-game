@@ -1,3 +1,4 @@
+﻿#include <algorithm>
 #include <cstddef>
 
 #include "game/Level.h"
@@ -54,6 +55,33 @@ namespace game
             static_cast<std::size_t>(column);
 
         return hit_points[index];
+    }
+
+    std::string to_text(const Level& level)
+    {
+        std::string text;
+        if (level.columns <= 0 || level.rows <= 0)
+        {
+            return text;
+        }
+
+        text.reserve(static_cast<std::size_t>(level.rows) *
+                     static_cast<std::size_t>(level.columns + 1));
+
+        for (int row = 0; row < level.rows; ++row)
+        {
+            for (int column = 0; column < level.columns; ++column)
+            {
+                const int hit_points = level.at(column, row);
+                text.push_back(hit_points <= 0
+                                   ? '.'
+                                   : static_cast<char>('0' + (std::min)(hit_points, 9)));
+            }
+
+            text.push_back('\n');
+        }
+
+        return text;
     }
 
     Level parse_level(std::string_view text)

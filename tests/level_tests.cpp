@@ -94,6 +94,64 @@ TEST(ParseLevel, ReadsAllNineToughnessLevels)
     }
 }
 
+TEST(ToText, AnEmptyLevelIsEmptyText)
+{
+    EXPECT_EQ(game::to_text(game::Level{}), "");
+}
+
+TEST(ToText, WritesDotsForEmptyCellsAndDigitsOtherwise)
+{
+    EXPECT_EQ(game::to_text(game::parse_level("1.2")), "1.2\n");
+}
+
+TEST(ToText, WritesOneLinePerRow)
+{
+    EXPECT_EQ(game::to_text(game::parse_level("12\n34")), "12\n34\n");
+}
+
+TEST(ToText, PadsShortRowsToTheFullWidth)
+{
+    EXPECT_EQ(game::to_text(game::parse_level("111\n1")), "111\n1..\n");
+}
+
+TEST(ToText, RoundTripsThroughTheParser)
+{
+    const char* sources[] = {
+        "1",
+        "1.2\n.3.",
+        "..111111..\n.12222221.\n1233333321\n.12222221.\n..111111..",
+        "123456789",
+        ".....\n.....",
+    };
+
+    for (const char* source : sources)
+    {
+        const game::Level original = game::parse_level(source);
+        EXPECT_EQ(game::parse_level(game::to_text(original)), original) << source;
+    }
+}
+
+// Empty cells are '.' and not spaces because the parser strips blank outer lines,
+// so a trailing row of spaces would vanish on reload and the level would lose
+// a row every time it was saved.
+TEST(ToText, RoundTripSurvivesATrailingEmptyRow)
+{
+    const game::Level original = game::parse_level("111\n...");
+
+    ASSERT_EQ(original.rows, 2);
+    EXPECT_EQ(game::parse_level(game::to_text(original)).rows, 2);
+}
+
+TEST(ToText, ClampsHitPointsToASingleDigit)
+{
+    game::Level level;
+    level.columns = 2;
+    level.rows = 1;
+    level.hit_points = {12, -3};
+
+    EXPECT_EQ(game::to_text(level), "9.\n");
+}
+
 TEST(Level, AtIsSafeOutsideTheGrid)
 {
     const game::Level level = game::parse_level("11\n11");
