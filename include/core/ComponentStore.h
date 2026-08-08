@@ -13,6 +13,9 @@ namespace core
     //
     // Removal is swap-and-pop, so the dense order is not stable: removing a
     // component moves the last one into its place.
+    //
+    // The sparse set layout is the entity storage worked through in Handmade
+    // Hero, day 277: https://handmadehero.org
     template <typename T>
     class ComponentStore
     {

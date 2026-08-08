@@ -9,6 +9,9 @@
 #include "platform/Viewport.h"
 #include "platform/Renderer.h"
 
+// Shader compilation, the vertex array and buffer setup, and the batched draw
+// follow the approach taught at https://learnopengl.com
+
 namespace platform
 {
     namespace

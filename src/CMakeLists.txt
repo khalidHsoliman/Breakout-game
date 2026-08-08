@@ -20,7 +20,8 @@ target_link_libraries(breakout_game
 
 add_library(breakout_platform STATIC
     platform/Window.cpp
-    platform/Renderer.cpp)
+    platform/Renderer.cpp
+    platform/FileSystem.cpp)
 
 target_include_directories(breakout_platform PUBLIC "${CMAKE_SOURCE_DIR}/include")
 target_link_libraries(breakout_platform
