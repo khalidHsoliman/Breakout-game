@@ -45,10 +45,12 @@ namespace platform
     // pixel is measured from the top-left with y increasing downward, which is
     // how a cursor is reported. The world has y increasing upward, so this is
     // where the flip happens.
-    inline math::Vec2 world_from_pixel(math::Vec2 pixel,
-                                       math::Vec2 framebuffer_size,
-                                       Viewport viewport,
-                                       math::Vec2 world_size)
+    inline math::Vec2 world_from_pixel(
+        math::Vec2 pixel,
+        math::Vec2 framebuffer_size,
+        Viewport viewport,
+        math::Vec2 world_size
+    )
     {
         if (viewport.width <= 0.0f || viewport.height <= 0.0f)
         {

@@ -113,8 +113,10 @@ TEST(Font, TextWidthAddsSpacingBetweenCharactersOnly)
 
 TEST(Font, TextWidthScalesWithPixelSize)
 {
-    EXPECT_FLOAT_EQ(platform::text_width("HELLO", 2.0f) * 2.0f,
-                    platform::text_width("HELLO", 4.0f));
+    EXPECT_FLOAT_EQ(
+        platform::text_width("HELLO", 2.0f) * 2.0f,
+        platform::text_width("HELLO", 4.0f)
+    );
 }
 
 TEST(Font, TextHeightIsSevenPixels)

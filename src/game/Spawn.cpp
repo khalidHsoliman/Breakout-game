@@ -39,8 +39,10 @@ namespace game
     {
         const core::Entity entity = world.create_entity();
 
-        world.transforms.add(entity, Transform{math::Vec2{world.size.x * 0.5f, PADDLE_Y},
-                                               math::Vec2{PADDLE_WIDTH, PADDLE_HEIGHT}});
+        world.transforms.add(
+            entity,
+            Transform{math::Vec2{world.size.x * 0.5f, PADDLE_Y}, math::Vec2{PADDLE_WIDTH, PADDLE_HEIGHT}}
+        );
         world.colors.add(entity, core::Color{0.90f, 0.90f, 0.90f});
         world.paddles.add(entity, Paddle{PADDLE_SPEED});
 
@@ -51,8 +53,10 @@ namespace game
     {
         const core::Entity entity = world.create_entity();
 
-        world.transforms.add(entity, Transform{math::Vec2{},
-                                               math::Vec2{BALL_RADIUS * 2.0f, BALL_RADIUS * 2.0f}});
+        world.transforms.add(
+            entity,
+            Transform{math::Vec2{}, math::Vec2{BALL_RADIUS * 2.0f, BALL_RADIUS * 2.0f}}
+        );
         world.colors.add(entity, core::Color{0.95f, 0.65f, 0.25f});
         world.circle_shapes.add(entity, CircleShape{});
         world.balls.add(entity, Ball{BALL_RADIUS});
@@ -120,7 +124,9 @@ namespace game
                 const core::Entity entity = world.create_entity();
 
                 world.transforms.add(
-                    entity, Transform{brick_center(level, world.size, column, row), size});
+                    entity,
+                    Transform{brick_center(level, world.size, column, row), size}
+                );
                 world.colors.add(entity, brick_color(hit_points));
                 world.bricks.add(entity, Brick{hit_points});
             }

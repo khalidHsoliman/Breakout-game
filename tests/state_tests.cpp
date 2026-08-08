@@ -56,8 +56,10 @@ TEST(StateMachine, TheHeldBallFollowsThePaddle)
     const core::Entity ball = world.balls.entities()[0];
     const core::Entity paddle = world.paddles.entities()[0];
 
-    EXPECT_FLOAT_EQ(world.transforms.find(ball)->position.x,
-                    world.transforms.find(paddle)->position.x);
+    EXPECT_FLOAT_EQ(
+        world.transforms.find(ball)->position.x,
+        world.transforms.find(paddle)->position.x
+    );
     EXPECT_GT(world.transforms.find(paddle)->position.x, 400.0f);
 }
 

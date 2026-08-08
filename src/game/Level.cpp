@@ -65,17 +65,18 @@ namespace game
             return text;
         }
 
-        text.reserve(static_cast<std::size_t>(level.rows) *
-                     static_cast<std::size_t>(level.columns + 1));
+        text.reserve(
+            static_cast<std::size_t>(level.rows) * static_cast<std::size_t>(level.columns + 1)
+        );
 
         for (int row = 0; row < level.rows; ++row)
         {
             for (int column = 0; column < level.columns; ++column)
             {
                 const int hit_points = level.at(column, row);
-                text.push_back(hit_points <= 0
-                                   ? '.'
-                                   : static_cast<char>('0' + (std::min)(hit_points, 9)));
+                text.push_back(
+                    hit_points <= 0 ? '.' : static_cast<char>('0' + (std::min)(hit_points, 9))
+                );
             }
 
             text.push_back('\n');
@@ -118,7 +119,9 @@ namespace game
         // Short rows keep their trailing zeros, so a file with trailing spaces
         // stripped still loads.
         level.hit_points.assign(
-            static_cast<std::size_t>(level.rows) * static_cast<std::size_t>(level.columns), 0);
+            static_cast<std::size_t>(level.rows) * static_cast<std::size_t>(level.columns),
+            0
+        );
 
         for (std::size_t i = first; i < last; ++i)
         {

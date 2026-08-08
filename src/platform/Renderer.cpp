@@ -129,12 +129,18 @@ void main()
         glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                              reinterpret_cast<const void*>(offsetof(Vertex, x)));
+        glVertexAttribPointer(
+            0, 2, GL_FLOAT, GL_FALSE,
+            sizeof(Vertex),
+            reinterpret_cast<const void*>(offsetof(Vertex, x))
+        );
         glEnableVertexAttribArray(0);
 
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                              reinterpret_cast<const void*>(offsetof(Vertex, r)));
+        glVertexAttribPointer(
+            1, 3, GL_FLOAT, GL_FALSE,
+            sizeof(Vertex),
+            reinterpret_cast<const void*>(offsetof(Vertex, r))
+        );
         glEnableVertexAttribArray(1);
 
         glBindVertexArray(0);
@@ -153,8 +159,12 @@ void main()
         m_framebuffer_size = framebuffer_size;
         m_viewport = fit_viewport(m_world_size, framebuffer_size);
 
-        glViewport(static_cast<int>(m_viewport.x), static_cast<int>(m_viewport.y),
-                   static_cast<int>(m_viewport.width), static_cast<int>(m_viewport.height));
+        glViewport(
+            static_cast<int>(m_viewport.x),
+            static_cast<int>(m_viewport.y),
+            static_cast<int>(m_viewport.width),
+            static_cast<int>(m_viewport.height)
+        );
     }
 
     math::Vec2 Renderer::world_from_pixel(math::Vec2 pixel) const
@@ -184,8 +194,12 @@ void main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         glEnable(GL_SCISSOR_TEST);
-        glScissor(static_cast<int>(m_viewport.x), static_cast<int>(m_viewport.y),
-                  static_cast<int>(m_viewport.width), static_cast<int>(m_viewport.height));
+        glScissor(
+            static_cast<int>(m_viewport.x),
+            static_cast<int>(m_viewport.y),
+            static_cast<int>(m_viewport.width),
+            static_cast<int>(m_viewport.height)
+        );
         glClearColor(color.r, color.g, color.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_SCISSOR_TEST);
@@ -231,12 +245,16 @@ void main()
 
             // Wound counter-clockwise, matching draw_quad.
             m_vertices.push_back(middle);
-            m_vertices.push_back(Vertex{center.x + std::cos(from) * radius,
-                                        center.y + std::sin(from) * radius,
-                                        color.r, color.g, color.b});
-            m_vertices.push_back(Vertex{center.x + std::cos(to) * radius,
-                                        center.y + std::sin(to) * radius,
-                                        color.r, color.g, color.b});
+            m_vertices.push_back(Vertex{
+                center.x + std::cos(from) * radius,
+                center.y + std::sin(from) * radius,
+                color.r, color.g, color.b
+            });
+            m_vertices.push_back(Vertex{
+                center.x + std::cos(to) * radius,
+                center.y + std::sin(to) * radius,
+                color.r, color.g, color.b
+            });
         }
     }
 
@@ -283,10 +301,12 @@ void main()
 
         glBindVertexArray(m_vao);
         glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-        glBufferData(GL_ARRAY_BUFFER,
-                     static_cast<GLsizeiptr>(m_vertices.size() * sizeof(Vertex)),
-                     m_vertices.data(),
-                     GL_DYNAMIC_DRAW);
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(m_vertices.size() * sizeof(Vertex)),
+            m_vertices.data(),
+            GL_DYNAMIC_DRAW
+        );
 
         glUseProgram(m_program);
         glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(m_vertices.size()));
