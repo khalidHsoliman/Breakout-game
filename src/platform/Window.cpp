@@ -36,6 +36,14 @@ namespace platform
                 return GLFW_KEY_P;
             case Key::Restart:
                 return GLFW_KEY_R;
+            case Key::ToggleEditor:
+                return GLFW_KEY_E;
+            case Key::Save:
+                return GLFW_KEY_S;
+            case Key::Load:
+                return GLFW_KEY_L;
+            case Key::Play:
+                return GLFW_KEY_ENTER;
             }
             return GLFW_KEY_UNKNOWN;
         }
@@ -164,13 +172,23 @@ namespace platform
                 return;
             }
 
-            glfwSetWindowMonitor(m_handle, monitor, 0, 0,
-                                 mode->width, mode->height, mode->refreshRate);
+            glfwSetWindowMonitor(
+                m_handle,
+                monitor,
+                0, 0,
+                mode->width, mode->height,
+                mode->refreshRate
+            );
         }
         else
         {
-            glfwSetWindowMonitor(m_handle, nullptr, m_windowed_x, m_windowed_y,
-                                 m_windowed_width, m_windowed_height, GLFW_DONT_CARE);
+            glfwSetWindowMonitor(
+                m_handle,
+                nullptr,
+                m_windowed_x, m_windowed_y,
+                m_windowed_width, m_windowed_height,
+                GLFW_DONT_CARE
+            );
         }
 
         // The swap interval is not guaranteed to survive a monitor change.

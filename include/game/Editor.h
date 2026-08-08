@@ -10,6 +10,12 @@ namespace game
     // level built here always reads at a glance.
     inline constexpr int MAX_EDITABLE_HIT_POINTS = 4;
 
+    // The editor's canvas is a fixed shape, whatever was loaded into it.
+    inline constexpr int EDITOR_COLUMNS = 10;
+    inline constexpr int EDITOR_ROWS = 6;
+
+    Level editor_canvas(const Level& source);
+
     // Empty -> 1 -> 2 -> ... -> MAX -> empty. Hit points above the cap, which
     // only a hand-authored file can contain, clear rather than continuing up.
     void cycle_cell(Level& level, Cell cell);

@@ -19,10 +19,14 @@ namespace platform
         MoveRight,
         Launch,
         Pause,
-        Restart
+        Restart,
+        ToggleEditor,
+        Save,
+        Load,
+        Play
     };
 
-    inline constexpr std::size_t KEY_COUNT = 7;
+    inline constexpr std::size_t KEY_COUNT = 11;
 
     enum class MouseButton
     {

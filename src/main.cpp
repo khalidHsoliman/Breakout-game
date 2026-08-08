@@ -1,16 +1,26 @@
 ﻿#include <chrono>
 #include <cstddef>
+#include <filesystem>
 #include <string>
 #include <string_view>
 
+#include "game/Editor.h"
+#include "game/LevelLayout.h"
 #include "game/Spawn.h"
 #include "game/Systems.h"
+#include "platform/FileSystem.h"
 #include "platform/Font.h"
 #include "platform/Renderer.h"
 #include "platform/Window.h"
 
 namespace
 {
+    enum class AppMode
+    {
+        Playing,
+        Editing
+    };
+
     // Starting mode only - F11 toggles at runtime.
     constexpr bool START_FULLSCREEN = false;
 
@@ -56,9 +66,23 @@ namespace
     constexpr float PROMPT_PIXEL = 3.0f;
 
     constexpr core::Color HUD_COLOR{0.85f, 0.88f, 0.92f};
+    constexpr core::Color GOOD_COLOR{0.60f, 0.90f, 0.55f};
+    constexpr core::Color BAD_COLOR{0.92f, 0.45f, 0.45f};
 
-    void draw_centered(platform::Renderer& renderer, std::string_view text,
-                       float y, float pixel_size, core::Color color)
+    // An empty cell is drawn rather than skipped, so the grid shows where the
+    // clickable area is.
+    constexpr core::Color EMPTY_CELL_COLOR{0.16f, 0.18f, 0.22f};
+    constexpr float CURSOR_BORDER = 3.0f;
+
+    constexpr const char* LEVEL_FILE_NAME = "custom-level.txt";
+
+    void draw_centered(
+        platform::Renderer& renderer,
+        std::string_view text,
+        float y,
+        float pixel_size,
+        core::Color color
+    )
     {
         const float x = (WORLD_SIZE.x - platform::text_width(text, pixel_size)) * 0.5f;
         renderer.draw_text(text, math::Vec2{x, y}, pixel_size, color);
@@ -77,6 +101,7 @@ namespace
         {
         case game::GameState::Ready:
             draw_centered(renderer, "PRESS SPACE TO LAUNCH", 200.0f, PROMPT_PIXEL, HUD_COLOR);
+            draw_centered(renderer, "E FOR THE LEVEL EDITOR", 160.0f, PROMPT_PIXEL, HUD_COLOR);
             break;
         case game::GameState::Paused:
             draw_centered(renderer, "PAUSED", 300.0f, HEADLINE_PIXEL, HUD_COLOR);
@@ -118,6 +143,47 @@ namespace
             }
         }
     }
+
+    void render_editor(const game::Level& level, game::Cell cursor, platform::Renderer& renderer)
+    {
+        const math::Vec2 size = game::brick_size(level, WORLD_SIZE);
+
+        for (int row = 0; row < level.rows; ++row)
+        {
+            for (int column = 0; column < level.columns; ++column)
+            {
+                const math::Vec2 center = game::brick_center(level, WORLD_SIZE, column, row);
+
+                if (cursor.inside && cursor.column == column && cursor.row == row)
+                {
+                    renderer.draw_quad(
+                        center,
+                        size + math::Vec2{2.0f * CURSOR_BORDER, 2.0f * CURSOR_BORDER},
+                        HUD_COLOR
+                    );
+                }
+
+                const int hit_points = level.at(column, row);
+                renderer.draw_quad(
+                    center,
+                    size,
+                    hit_points > 0 ? game::brick_color(hit_points) : EMPTY_CELL_COLOR
+                );
+            }
+        }
+    }
+
+    void render_editor_hud(platform::Renderer& renderer, std::string_view status, core::Color status_color)
+    {
+        draw_centered(renderer, "LEVEL EDITOR", 560.0f, HUD_PIXEL, HUD_COLOR);
+        draw_centered(renderer, "CLICK CYCLES A BRICK   RIGHT CLICK CLEARS", 150.0f, PROMPT_PIXEL, HUD_COLOR);
+        draw_centered(renderer, "S SAVE   L LOAD   ENTER PLAY   E BACK", 120.0f, PROMPT_PIXEL, HUD_COLOR);
+
+        if (!status.empty())
+        {
+            draw_centered(renderer, status, 70.0f, PROMPT_PIXEL, status_color);
+        }
+    }
 }
 
 int main()
@@ -142,6 +208,17 @@ int main()
     float accumulator = 0.0f;
     game::Input input;
 
+    AppMode mode = AppMode::Playing;
+
+    // The level under construction. Separate from world.level
+    game::Level canvas;
+    game::Cell cursor;
+
+    std::string status;
+    core::Color status_color = HUD_COLOR;
+
+    const std::filesystem::path level_path = platform::executable_directory() / LEVEL_FILE_NAME;
+
     while (!window.should_close())
     {
         window.poll_events();
@@ -157,33 +234,102 @@ int main()
             renderer.set_viewport(window.framebuffer_size());
         }
 
+        if (window.is_key_pressed(platform::Key::ToggleEditor))
+        {
+            if (mode == AppMode::Playing)
+            {
+                canvas = game::editor_canvas(world.level);
+                status.clear();
+            }
+
+            mode = (mode == AppMode::Playing) ? AppMode::Editing : AppMode::Playing;
+        }
+
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
         accumulator += std::chrono::duration<float>(now - previous).count();
         previous = now;
 
-        read_input(window, input);
-
-        int steps = 0;
-        while (accumulator >= FIXED_DT && steps < MAX_STEPS_PER_FRAME)
+        if (mode == AppMode::Editing)
         {
-            game::step(world, input, FIXED_DT);
+            cursor = game::cell_at(canvas, WORLD_SIZE, renderer.world_from_pixel(window.cursor_pixel()));
 
-            // Consumed. Held state is refreshed next frame regardless.
-            input.clear_one_shots();
+            if (window.is_mouse_pressed(platform::MouseButton::Left))
+            {
+                game::cycle_cell(canvas, cursor);
+                status.clear();
+            }
 
-            accumulator -= FIXED_DT;
-            ++steps;
-        }
+            if (window.is_mouse_pressed(platform::MouseButton::Right))
+            {
+                game::clear_cell(canvas, cursor);
+                status.clear();
+            }
 
-        if (steps == MAX_STEPS_PER_FRAME)
-        {
+            if (window.is_key_pressed(platform::Key::Save))
+            {
+                const bool saved = platform::write_text_file(level_path, game::to_text(canvas));
+                status = saved ? "SAVED" : "COULD NOT SAVE";
+                status_color = saved ? GOOD_COLOR : BAD_COLOR;
+            }
+
+            if (window.is_key_pressed(platform::Key::Load))
+            {
+                std::string text;
+                const bool loaded = platform::read_text_file(level_path, text);
+                if (loaded)
+                {
+                    canvas = game::editor_canvas(game::parse_level(text));
+                }
+
+                status = loaded ? "LOADED" : "NOTHING SAVED YET";
+                status_color = loaded ? GOOD_COLOR : BAD_COLOR;
+            }
+
+            if (window.is_key_pressed(platform::Key::Play))
+            {
+                game::start_game(world, canvas);
+                mode = AppMode::Playing;
+            }
+
+            // No game time passes while editing
             accumulator = 0.0f;
+        }
+        else
+        {
+            read_input(window, input);
+
+            int steps = 0;
+            while (accumulator >= FIXED_DT && steps < MAX_STEPS_PER_FRAME)
+            {
+                game::step(world, input, FIXED_DT);
+
+                // Consumed. Held state is refreshed next frame regardless.
+                input.clear_one_shots();
+
+                accumulator -= FIXED_DT;
+                ++steps;
+            }
+
+            if (steps == MAX_STEPS_PER_FRAME)
+            {
+                accumulator = 0.0f;
+            }
         }
 
         renderer.begin_frame();
         renderer.clear(core::Color{0.10f, 0.12f, 0.15f});
-        render_world(world, renderer);
-        render_hud(world, renderer);
+
+        if (mode == AppMode::Editing)
+        {
+            render_editor(canvas, cursor, renderer);
+            render_editor_hud(renderer, status, status_color);
+        }
+        else
+        {
+            render_world(world, renderer);
+            render_hud(world, renderer);
+        }
+
         renderer.end_frame();
 
         window.swap_buffers();

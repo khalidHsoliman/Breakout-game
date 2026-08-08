@@ -22,6 +22,27 @@ namespace game
         }
     }
 
+    Level editor_canvas(const Level& source)
+    {
+        Level canvas;
+        canvas.columns = EDITOR_COLUMNS;
+        canvas.rows = EDITOR_ROWS;
+        canvas.hit_points.assign(
+            static_cast<std::size_t>(EDITOR_COLUMNS) * static_cast<std::size_t>(EDITOR_ROWS),
+            0
+        );
+
+        for (int row = 0; row < EDITOR_ROWS; ++row)
+        {
+            for (int column = 0; column < EDITOR_COLUMNS; ++column)
+            {
+                canvas.hit_points[static_cast<std::size_t>(row) * EDITOR_COLUMNS + column] = source.at(column, row);
+            }
+        }
+
+        return canvas;
+    }
+
     void cycle_cell(Level& level, Cell cell)
     {
         int* hit_points = mutable_cell(level, cell);
