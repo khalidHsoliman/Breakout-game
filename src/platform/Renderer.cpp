@@ -6,6 +6,7 @@
 #include <numbers>
 
 #include "platform/Font.h"
+#include "platform/Viewport.h"
 #include "platform/Renderer.h"
 
 namespace platform
@@ -146,29 +147,16 @@ void main()
 
     void Renderer::set_viewport(math::Vec2 framebuffer_size)
     {
-        // Fit the world's aspect ratio inside the framebuffer and centre it.
-        // Whichever axis has room to spare becomes a bar.
-        const float world_aspect = m_world_size.x / m_world_size.y;
-        const float frame_aspect = framebuffer_size.x / framebuffer_size.y;
+        m_framebuffer_size = framebuffer_size;
+        m_viewport = fit_viewport(m_world_size, framebuffer_size);
 
-        float viewport_width = framebuffer_size.x;
-        float viewport_height = framebuffer_size.y;
+        glViewport(static_cast<int>(m_viewport.x), static_cast<int>(m_viewport.y),
+                   static_cast<int>(m_viewport.width), static_cast<int>(m_viewport.height));
+    }
 
-        if (frame_aspect > world_aspect)
-        {
-            viewport_width = framebuffer_size.y * world_aspect;
-        }
-        else
-        {
-            viewport_height = framebuffer_size.x / world_aspect;
-        }
-
-        m_viewport_width = static_cast<int>(viewport_width);
-        m_viewport_height = static_cast<int>(viewport_height);
-        m_viewport_x = static_cast<int>((framebuffer_size.x - viewport_width) * 0.5f);
-        m_viewport_y = static_cast<int>((framebuffer_size.y - viewport_height) * 0.5f);
-
-        glViewport(m_viewport_x, m_viewport_y, m_viewport_width, m_viewport_height);
+    math::Vec2 Renderer::world_from_pixel(math::Vec2 pixel) const
+    {
+        return platform::world_from_pixel(pixel, m_framebuffer_size, m_viewport, m_world_size);
     }
 
     Renderer::~Renderer()
@@ -188,13 +176,13 @@ void main()
     void Renderer::clear(core::Color color)
     {
         // glClear ignores the viewport, so the bars would otherwise take the
-        // play area's colour. Black them out first, then scissor the clear to
-        // the viewport so the play area is visibly delimited.
+        // play area's colour.
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glEnable(GL_SCISSOR_TEST);
-        glScissor(m_viewport_x, m_viewport_y, m_viewport_width, m_viewport_height);
+        glScissor(static_cast<int>(m_viewport.x), static_cast<int>(m_viewport.y),
+                  static_cast<int>(m_viewport.width), static_cast<int>(m_viewport.height));
         glClearColor(color.r, color.g, color.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_SCISSOR_TEST);

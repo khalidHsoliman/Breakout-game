@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/Color.h"
+#include "platform/Viewport.h"
 #include "math/Vec2.h"
 
 namespace platform
@@ -24,15 +25,14 @@ namespace platform
 
         // Compiles the shaders and creates the vertex buffers. Reports the
         // reason to stderr and returns false on failure.
-        //
-        // The viewport is the largest rectangle with the world's aspect ratio
-        // that fits the framebuffer, centred, so the world is never distorted
-        // by the shape of the display.
         bool init(math::Vec2 world_size, math::Vec2 framebuffer_size);
 
         // Call again whenever the framebuffer size changes, such as after
         // toggling fullscreen.
         void set_viewport(math::Vec2 framebuffer_size);
+
+        // Turns a cursor pixel (top-left origin, y down) into a world position
+        math::Vec2 world_from_pixel(math::Vec2 pixel) const;
 
         void begin_frame();
         void clear(core::Color color);
@@ -59,9 +59,7 @@ namespace platform
         unsigned int m_vao = 0;
         unsigned int m_vbo = 0;
 
-        int m_viewport_x = 0;
-        int m_viewport_y = 0;
-        int m_viewport_width = 0;
-        int m_viewport_height = 0;
+        Viewport m_viewport;
+        math::Vec2 m_framebuffer_size;
     };
 }
