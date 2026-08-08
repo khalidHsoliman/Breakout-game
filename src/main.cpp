@@ -8,6 +8,7 @@
 #include "game/LevelLayout.h"
 #include "game/Spawn.h"
 #include "game/Systems.h"
+#include "platform/Audio.h"
 #include "platform/FileSystem.h"
 #include "platform/Font.h"
 #include "platform/Renderer.h"
@@ -225,6 +226,10 @@ int main()
         return 1;
     }
 
+    platform::Audio audio;
+    audio.init(platform::executable_directory() / "assets");
+    audio.start_music();
+
     game::World world;
     world.size = WORLD_SIZE;
     game::start_game(world, game::parse_level(FIRST_LEVEL));
@@ -339,6 +344,17 @@ int main()
             {
                 accumulator = 0.0f;
             }
+
+            for (const game::GameEvent event : world.events)
+            {
+                audio.play(
+                    event == game::GameEvent::BrickHit
+                        ? platform::Sound::BrickHit
+                        : platform::Sound::PaddleBounce
+                    );
+            }
+
+            world.events.clear();
         }
 
         renderer.begin_frame();
