@@ -20,6 +20,7 @@ add_executable(breakout_tests
     level_tests.cpp
     spawn_tests.cpp
     input_tests.cpp
+    font_tests.cpp
     state_tests.cpp)
 
 target_link_libraries(breakout_tests PRIVATE

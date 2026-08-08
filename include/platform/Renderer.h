@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string_view>
 #include <vector>
 
 #include "core/Color.h"
@@ -37,6 +38,10 @@ namespace platform
         void clear(core::Color color);
         void draw_quad(math::Vec2 center, math::Vec2 size, core::Color color);
         void draw_circle(math::Vec2 center, float radius, core::Color color, int segments = 24);
+
+        // One quad per lit pixel of a 5x7 glyph. position is the bottom-left of
+        // the text, and pixel_size is the world size of one font pixel.
+        void draw_text(std::string_view text, math::Vec2 position, float pixel_size, core::Color color);
         void end_frame();
 
     private:

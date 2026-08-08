@@ -1,8 +1,11 @@
 ﻿#include <chrono>
 #include <cstddef>
+#include <string>
+#include <string_view>
 
 #include "game/Spawn.h"
 #include "game/Systems.h"
+#include "platform/Font.h"
 #include "platform/Renderer.h"
 #include "platform/Window.h"
 
@@ -46,6 +49,51 @@ namespace
         input.launch |= window.is_key_pressed(platform::Key::Launch);
         input.toggle_pause |= window.is_key_pressed(platform::Key::Pause);
         input.restart |= window.is_key_pressed(platform::Key::Restart);
+    }
+
+    constexpr float hud_pixel = 3.0f;
+    constexpr float headline_pixel = 6.0f;
+    constexpr float prompt_pixel = 3.0f;
+
+    const core::Color hud_color{0.85f, 0.88f, 0.92f};
+
+    void draw_centered(platform::Renderer& renderer, std::string_view text,
+                       float y, float pixel_size, core::Color color)
+    {
+        const float x = (world_size.x - platform::text_width(text, pixel_size)) * 0.5f;
+        renderer.draw_text(text, math::Vec2{x, y}, pixel_size, color);
+    }
+
+    // Everything the player is told. Which message belongs to which state is a
+    // presentation decision, so it lives here rather than in game/.
+    void render_hud(const game::World& world, platform::Renderer& renderer)
+    {
+        const std::string score = "SCORE " + std::to_string(world.score);
+        renderer.draw_text(score, math::Vec2{20.0f, 568.0f}, hud_pixel, hud_color);
+
+        const std::string lives = "LIVES " + std::to_string(world.lives);
+        const float lives_x = world_size.x - 20.0f - platform::text_width(lives, hud_pixel);
+        renderer.draw_text(lives, math::Vec2{lives_x, 568.0f}, hud_pixel, hud_color);
+
+        switch (world.state)
+        {
+        case game::GameState::Ready:
+            draw_centered(renderer, "PRESS SPACE TO LAUNCH", 200.0f, prompt_pixel, hud_color);
+            break;
+        case game::GameState::Paused:
+            draw_centered(renderer, "PAUSED", 300.0f, headline_pixel, hud_color);
+            break;
+        case game::GameState::GameOver:
+            draw_centered(renderer, "GAME OVER", 320.0f, headline_pixel, core::Color{0.92f, 0.45f, 0.45f});
+            draw_centered(renderer, "PRESS R TO RESTART", 270.0f, prompt_pixel, hud_color);
+            break;
+        case game::GameState::Won:
+            draw_centered(renderer, "YOU WIN", 320.0f, headline_pixel, core::Color{0.60f, 0.90f, 0.55f});
+            draw_centered(renderer, "PRESS R TO RESTART", 270.0f, prompt_pixel, hud_color);
+            break;
+        case game::GameState::Playing:
+            break;
+        }
     }
 
     void render_world(const game::World& world, platform::Renderer& renderer)
@@ -137,6 +185,7 @@ int main()
         renderer.begin_frame();
         renderer.clear(core::Color{0.10f, 0.12f, 0.15f});
         render_world(world, renderer);
+        render_hud(world, renderer);
         renderer.end_frame();
 
         window.swap_buffers();

@@ -1,10 +1,11 @@
-#include <glad/gl.h>
+﻿#include <glad/gl.h>
 
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <numbers>
 
+#include "platform/Font.h"
 #include "platform/Renderer.h"
 
 namespace platform
@@ -245,6 +246,40 @@ void main()
             m_vertices.push_back(Vertex{center.x + std::cos(to) * radius,
                                         center.y + std::sin(to) * radius,
                                         color.r, color.g, color.b});
+        }
+    }
+
+    void Renderer::draw_text(std::string_view text, math::Vec2 position, float pixel_size, core::Color color)
+    {
+        float x = position.x;
+
+        for (const char character : text)
+        {
+            const Glyph glyph = glyph_for(character);
+
+            for (int row = 0; row < glyph_height; ++row)
+            {
+                for (int column = 0; column < glyph_width; ++column)
+                {
+                    const std::uint8_t mask =
+                        static_cast<std::uint8_t>(1u << (glyph_width - 1 - column));
+
+                    if ((glyph[static_cast<std::size_t>(row)] & mask) == 0)
+                    {
+                        continue;
+                    }
+
+                    // Row 0 is the top of the glyph, but world y increases
+                    // upward, so rows are drawn from the top down.
+                    const math::Vec2 center{
+                        x + (static_cast<float>(column) + 0.5f) * pixel_size,
+                        position.y + (static_cast<float>(glyph_height - 1 - row) + 0.5f) * pixel_size};
+
+                    draw_quad(center, math::Vec2{pixel_size, pixel_size}, color);
+                }
+            }
+
+            x += static_cast<float>(glyph_width + glyph_spacing) * pixel_size;
         }
     }
 
