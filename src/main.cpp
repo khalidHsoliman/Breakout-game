@@ -130,11 +130,11 @@ namespace
             draw_centered(renderer, "PAUSED", 300.0f, HEADLINE_PIXEL, HUD_COLOR);
             break;
         case game::GameState::GameOver:
-            draw_centered(renderer, "GAME OVER", 320.0f, HEADLINE_PIXEL, core::Color{0.92f, 0.45f, 0.45f});
+            draw_centered(renderer, "GAME OVER", 320.0f, HEADLINE_PIXEL, BAD_COLOR);
             draw_centered(renderer, "PRESS R TO RESTART", 270.0f, PROMPT_PIXEL, HUD_COLOR);
             break;
         case game::GameState::Won:
-            draw_centered(renderer, "YOU WIN", 320.0f, HEADLINE_PIXEL, core::Color{0.60f, 0.90f, 0.55f});
+            draw_centered(renderer, "YOU WIN", 320.0f, HEADLINE_PIXEL, GOOD_COLOR);
             draw_centered(renderer, "PRESS R TO RESTART", 270.0f, PROMPT_PIXEL, HUD_COLOR);
             break;
         case game::GameState::Playing:
@@ -223,8 +223,10 @@ int main()
         return 1;
     }
 
+    const std::filesystem::path executable_directory = platform::executable_directory();
+
     platform::Audio audio;
-    audio.init(platform::executable_directory() / "assets");
+    audio.init(executable_directory / "assets");
     audio.start_music();
 
     game::World world;
@@ -244,7 +246,7 @@ int main()
     std::string status;
     core::Color status_color = HUD_COLOR;
 
-    const std::filesystem::path level_path = platform::executable_directory() / LEVEL_FILE_NAME;
+    const std::filesystem::path level_path = executable_directory / LEVEL_FILE_NAME;
 
     while (!window.should_close())
     {

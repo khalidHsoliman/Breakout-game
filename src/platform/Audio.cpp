@@ -73,7 +73,6 @@ namespace platform
         ma_engine_uninit(&m_device->engine);
 
         delete m_device;
-        m_device = nullptr;
     }
 
     bool Audio::init(const std::filesystem::path& asset_directory)

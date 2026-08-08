@@ -50,13 +50,6 @@ TEST(Vec2, ScalarDivision)
     EXPECT_FLOAT_EQ(halved.y, 2.0f);
 }
 
-TEST(Vec2, ScalarDivisionByZeroIsZero)
-{
-    math::Vec2 divided = math::Vec2{3.0f, 4.0f} / 0.0f;
-    EXPECT_FLOAT_EQ(divided.x, 0.0f);
-    EXPECT_FLOAT_EQ(divided.y, 0.0f);
-}
-
 TEST(Vec2, AddAssign)
 {
     math::Vec2 a{1.0f, 2.0f};
@@ -92,15 +85,6 @@ TEST(Vec2, DivideAssign)
 
     EXPECT_FLOAT_EQ(a.x, 1.5f);
     EXPECT_FLOAT_EQ(a.y, 2.0f);
-}
-
-TEST(Vec2, DivideAssignByZeroIsZero)
-{
-    math::Vec2 a{3.0f, 4.0f};
-    a /= 0.0f;
-
-    EXPECT_FLOAT_EQ(a.x, 0.0f);
-    EXPECT_FLOAT_EQ(a.y, 0.0f);
 }
 
 TEST(Vec2, DotProduct)

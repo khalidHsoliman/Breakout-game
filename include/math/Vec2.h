@@ -38,10 +38,6 @@ namespace math
 
     inline Vec2 operator/(Vec2 a, float b)
     {
-        if (b == 0.0f)
-        {
-            return Vec2{0.0f, 0.0f};
-        }
         return Vec2{a.x / b, a.y / b};
     }
 

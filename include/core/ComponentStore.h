@@ -98,10 +98,6 @@ namespace core
             return m_dense_entities;
         }
 
-        std::vector<T>& components()
-        {
-            return m_dense;
-        }
 
         const std::vector<T>& components() const
         {

@@ -4,24 +4,6 @@
 
 namespace game
 {
-    namespace
-    {
-        int* mutable_cell(Level& level, Cell cell)
-        {
-            if (!cell.inside || cell.column < 0 || cell.row < 0 ||
-                cell.column >= level.columns || cell.row >= level.rows)
-            {
-                return nullptr;
-            }
-
-            const std::size_t index =
-                static_cast<std::size_t>(cell.row) * static_cast<std::size_t>(level.columns) +
-                static_cast<std::size_t>(cell.column);
-
-            return &level.hit_points[index];
-        }
-    }
-
     Level editor_canvas(const Level& source)
     {
         Level canvas;
@@ -36,7 +18,9 @@ namespace game
         {
             for (int column = 0; column < EDITOR_COLUMNS; ++column)
             {
-                canvas.hit_points[static_cast<std::size_t>(row) * EDITOR_COLUMNS + column] = source.at(column, row);
+                // at returns 0 outside the source grid, so a smaller level
+                // needs no special case: the rest of the canvas stays empty.
+                canvas.set(column, row, source.at(column, row));
             }
         }
 
@@ -45,21 +29,25 @@ namespace game
 
     void cycle_cell(Level& level, Cell cell)
     {
-        int* hit_points = mutable_cell(level, cell);
-        if (hit_points == nullptr)
+        // The one thing Level cannot check for itself: a Cell that missed the
+        // grid reports column 0, row 0, which is a perfectly writable place.
+        if (!cell.inside)
         {
             return;
         }
 
-        *hit_points = (*hit_points >= MAX_EDITABLE_HIT_POINTS) ? 0 : *hit_points + 1;
+        const int hit_points = level.at(cell.column, cell.row);
+        level.set(cell.column, cell.row,
+                  hit_points >= MAX_EDITABLE_HIT_POINTS ? 0 : hit_points + 1);
     }
 
     void clear_cell(Level& level, Cell cell)
     {
-        int* hit_points = mutable_cell(level, cell);
-        if (hit_points != nullptr)
+        if (!cell.inside)
         {
-            *hit_points = 0;
+            return;
         }
+
+        level.set(cell.column, cell.row, 0);
     }
 }

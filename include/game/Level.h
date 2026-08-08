@@ -16,6 +16,7 @@ namespace game
 
         // Returns 0 outside the grid rather than reading out of bounds.
         int at(int column, int row) const;
+        void set(int column, int row, int value);
 
         bool operator==(const Level&) const = default;
     };

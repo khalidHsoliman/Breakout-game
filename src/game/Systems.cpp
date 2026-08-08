@@ -3,11 +3,9 @@
 #include <numbers>
 #include <vector>
 
-#include "math/Collision.h"
-
 #include "game/Spawn.h"
-
 #include "game/Systems.h"
+#include "math/Collision.h"
 
 namespace game
 {
@@ -291,18 +289,21 @@ namespace game
         const std::vector<core::Entity>& entities = world.balls.entities();
         const std::vector<Ball>& balls = world.balls.components();
 
-        for (std::size_t i = 0; i < balls.size(); ++i)
+        if (paddle != nullptr)
         {
-            Transform* transform = world.transforms.find(entities[i]);
-            if (transform == nullptr || paddle == nullptr)
+            for (std::size_t i = 0; i < balls.size(); ++i)
             {
-                continue;
-            }
+                Transform* transform = world.transforms.find(entities[i]);
+                if (transform == nullptr)
+                {
+                    continue;
+                }
 
-            // Parked on the paddle, so moving the paddle aims the shot.
-            transform->position = math::Vec2{
-                paddle->position.x,
-                paddle->position.y + paddle->size.y * 0.5f + balls[i].radius + SERVE_GAP};
+                // Parked on the paddle, so moving the paddle aims the shot.
+                transform->position = math::Vec2{
+                    paddle->position.x,
+                    paddle->position.y + paddle->size.y * 0.5f + balls[i].radius + SERVE_GAP};
+            }
         }
 
         if (!input.launch)

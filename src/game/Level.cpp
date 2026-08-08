@@ -43,18 +43,38 @@ namespace game
         }
     }
 
+    namespace
+    {
+        bool inside_grid(const Level& level, int column, int row)
+        {
+            return column >= 0 && row >= 0 && column < level.columns && row < level.rows;
+        }
+
+        std::size_t index_of(const Level& level, int column, int row)
+        {
+            return static_cast<std::size_t>(row) * static_cast<std::size_t>(level.columns) +
+                   static_cast<std::size_t>(column);
+        }
+    }
+
     int Level::at(int column, int row) const
     {
-        if (column < 0 || row < 0 || column >= columns || row >= rows)
+        if (!inside_grid(*this, column, row))
         {
             return 0;
         }
 
-        const std::size_t index =
-            static_cast<std::size_t>(row) * static_cast<std::size_t>(columns) +
-            static_cast<std::size_t>(column);
+        return hit_points[index_of(*this, column, row)];
+    }
 
-        return hit_points[index];
+    void Level::set(int column, int row, int value)
+    {
+        if (!inside_grid(*this, column, row))
+        {
+            return;
+        }
+
+        hit_points[index_of(*this, column, row)] = value;
     }
 
     std::string to_text(const Level& level)

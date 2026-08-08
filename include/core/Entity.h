@@ -7,14 +7,10 @@ namespace core
     struct Entity
     {
         std::uint32_t id = 0;
+
+        bool operator==(const Entity&) const = default;
     };
 
     // Reserved to mean "no entity". World never hands this out.
     inline constexpr Entity NULL_ENTITY{0};
-
-    // C++20 synthesises operator!= from this.
-    inline bool operator==(Entity a, Entity b)
-    {
-        return a.id == b.id;
-    }
 }

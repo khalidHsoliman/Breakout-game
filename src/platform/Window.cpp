@@ -283,9 +283,10 @@ namespace platform
         int buffer_height = 0;
         glfwGetFramebufferSize(m_handle, &buffer_width, &buffer_height);
 
-        return math::Vec2{
-            static_cast<float>(x) * static_cast<float>(buffer_width) / static_cast<float>(window_width),
-            static_cast<float>(y) * static_cast<float>(buffer_height) / static_cast<float>(window_height)};
+        const float scale_x = static_cast<float>(buffer_width) / static_cast<float>(window_width);
+        const float scale_y = static_cast<float>(buffer_height) / static_cast<float>(window_height);
+
+        return math::Vec2{static_cast<float>(x) * scale_x, static_cast<float>(y) * scale_y};
     }
 
     bool Window::is_mouse_down(MouseButton button) const
