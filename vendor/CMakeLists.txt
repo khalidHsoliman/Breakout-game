@@ -9,4 +9,9 @@ add_library(glad STATIC
 target_include_directories(glad SYSTEM PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/glad/include")
 
-set_target_properties(glfw glad PROPERTIES FOLDER "vendor")
+add_library(miniaudio STATIC
+    miniaudio/miniaudio.c)
+target_include_directories(miniaudio SYSTEM PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/miniaudio")
+
+set_target_properties(glfw glad miniaudio PROPERTIES FOLDER "vendor")

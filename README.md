@@ -4,8 +4,8 @@
 
 A Breakout clone in C++, written from scratch over seven days. No engine, no
 gameplay framework, and no maths library: the only dependencies are GLFW for the
-window and glad for the OpenGL loader, both vendored, plus GoogleTest fetched at
-configure time.
+window, glad for the OpenGL loader and miniaudio for sound, all three vendored
+as source, plus GoogleTest fetched at configure time.
 
 It ships with an in-game level editor. Levels are plain text, so one built with
 the mouse, one typed in Notepad and the one built into the game are the same
@@ -35,7 +35,7 @@ it works offline - use the `vs2022-x64-notests` preset instead.
 ctest --test-dir build -C Debug
 ```
 
-148 tests, green in both Debug and Release. CI runs both configurations on every
+154 tests, green in both Debug and Release. CI runs both configurations on every
 push.
 
 ## Controls
@@ -98,6 +98,11 @@ a hand-encoded 5x7 bitmap font drawn as one quad per lit pixel through that same
 batch, so there is no font library and no texture path. The play area keeps its
 aspect ratio on any display, with black bars where the shapes disagree.
 
+Sound works the same way the input does, in the opposite direction. `Window`
+turns key presses into a `game::Input` that carries no key codes; systems raise
+a `game::GameEvent` that carries no notion of sound, and `main` decides that a
+brick makes a noise.
+
 ## AI assistance
 
 Claude was used on this project for the following:
@@ -118,6 +123,10 @@ Claude was used on this project for the following:
 - [glad](https://glad.dav1d.de/) - the OpenGL loader
 - [glfw](https://www.glfw.org/) - the windowing library
 - [googletest](https://github.com/google/googletest) - the test framework
+- [miniaudio](https://miniaud.io) - audio playback, single header by David Reid
+- [learnopengl.com, Audio](https://learnopengl.com/In-Practice/2D-Game/Audio) -
+  which sounds a Breakout clone wants and when to play them. **The three sound
+  files in `assets/` are the ones from this article.**
 - [learnopengl.com](https://learnopengl.com) - shader compilation, vertex array
   and buffer setup, and the batched draw in `platform/Renderer`
 - [Handmade Hero](https://handmadehero.org), day 277 - the sparse set entity
