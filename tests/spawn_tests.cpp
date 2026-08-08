@@ -5,7 +5,7 @@
 namespace
 {
     // 6 + 8 + 10 + 8 + 6 = 38 bricks.
-    constexpr const char* diamond = R"(
+    constexpr const char* DIAMOND = R"(
 ..111111..
 .12222221.
 1233333321
@@ -25,7 +25,7 @@ TEST(SpawnLevel, CreatesOneBrickPerNonEmptyCell)
 {
     game::World world = make_world();
 
-    game::spawn_level(world, game::parse_level(diamond));
+    game::spawn_level(world, game::parse_level(DIAMOND));
 
     EXPECT_EQ(world.bricks.size(), 38u);
 }
@@ -50,7 +50,7 @@ TEST(SpawnLevel, BricksFitInsideThePlayArea)
 {
     game::World world = make_world();
 
-    game::spawn_level(world, game::parse_level(diamond));
+    game::spawn_level(world, game::parse_level(DIAMOND));
 
     for (const core::Entity entity : world.bricks.entities())
     {
@@ -70,10 +70,10 @@ TEST(SpawnLevel, GeometryScalesWithTheWorldSize)
 {
     game::World narrow = make_world();
     narrow.size = math::Vec2{400.0f, 600.0f};
-    game::spawn_level(narrow, game::parse_level(diamond));
+    game::spawn_level(narrow, game::parse_level(DIAMOND));
 
     game::World wide = make_world();
-    game::spawn_level(wide, game::parse_level(diamond));
+    game::spawn_level(wide, game::parse_level(DIAMOND));
 
     ASSERT_EQ(narrow.bricks.size(), wide.bricks.size());
 
@@ -121,7 +121,7 @@ TEST(LaunchBall, GivesTheBallAnUpwardVelocity)
 TEST(StartGame, RebuildsEverythingFromScratch)
 {
     game::World world = make_world();
-    game::start_game(world, game::parse_level(diamond));
+    game::start_game(world, game::parse_level(DIAMOND));
 
     const std::size_t bricks_before = world.bricks.size();
     world.score = 500;
@@ -133,7 +133,7 @@ TEST(StartGame, RebuildsEverythingFromScratch)
 
     EXPECT_EQ(world.bricks.size(), bricks_before);
     EXPECT_EQ(world.score, 0);
-    EXPECT_EQ(world.lives, game::starting_lives);
+    EXPECT_EQ(world.lives, game::STARTING_LIVES);
     EXPECT_EQ(world.state, game::GameState::Ready);
     EXPECT_EQ(world.paddles.size(), 1u);
     EXPECT_EQ(world.balls.size(), 1u);

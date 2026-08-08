@@ -1,4 +1,4 @@
-﻿#include <glad/gl.h>
+#include <glad/gl.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -203,7 +203,7 @@ namespace platform
     {
         // Snapshot before polling, so is_key_pressed compares this frame's
         // state against the previous frame's.
-        for (std::size_t i = 0; i < key_count; ++i)
+        for (std::size_t i = 0; i < KEY_COUNT; ++i)
         {
             m_previous_key_state[i] = is_key_down(static_cast<Key>(i));
         }

@@ -4,19 +4,19 @@ namespace game
 {
     namespace
     {
-        constexpr float paddle_width = 120.0f;
-        constexpr float paddle_height = 20.0f;
-        constexpr float paddle_y = 40.0f;
-        constexpr float paddle_speed = 520.0f;
+        constexpr float PADDLE_WIDTH = 120.0f;
+        constexpr float PADDLE_HEIGHT = 20.0f;
+        constexpr float PADDLE_Y = 40.0f;
+        constexpr float PADDLE_SPEED = 520.0f;
 
-        constexpr float ball_radius = 8.0f;
-        constexpr float ball_speed = 350.0f;
-        constexpr float ball_start_y = 120.0f;
+        constexpr float BALL_RADIUS = 8.0f;
+        constexpr float BALL_SPEED = 350.0f;
+        constexpr float BALL_START_Y = 120.0f;
 
-        constexpr float brick_side_margin = 20.0f;
-        constexpr float brick_top_margin = 40.0f;
-        constexpr float brick_height = 24.0f;
-        constexpr float brick_gap = 4.0f;
+        constexpr float BRICK_SIDE_MARGIN = 20.0f;
+        constexpr float BRICK_TOP_MARGIN = 40.0f;
+        constexpr float BRICK_HEIGHT = 24.0f;
+        constexpr float BRICK_GAP = 4.0f;
 
     }
 
@@ -43,10 +43,10 @@ namespace game
     {
         const core::Entity entity = world.create_entity();
 
-        world.transforms.add(entity, Transform{math::Vec2{world.size.x * 0.5f, paddle_y},
-                                               math::Vec2{paddle_width, paddle_height}});
+        world.transforms.add(entity, Transform{math::Vec2{world.size.x * 0.5f, PADDLE_Y},
+                                               math::Vec2{PADDLE_WIDTH, PADDLE_HEIGHT}});
         world.colors.add(entity, core::Color{0.90f, 0.90f, 0.90f});
-        world.paddles.add(entity, Paddle{paddle_speed});
+        world.paddles.add(entity, Paddle{PADDLE_SPEED});
 
         return entity;
     }
@@ -56,16 +56,16 @@ namespace game
         const core::Entity entity = world.create_entity();
 
         world.transforms.add(entity, Transform{math::Vec2{},
-                                               math::Vec2{ball_radius * 2.0f, ball_radius * 2.0f}});
+                                               math::Vec2{BALL_RADIUS * 2.0f, BALL_RADIUS * 2.0f}});
         world.colors.add(entity, core::Color{0.95f, 0.65f, 0.25f});
         world.circle_shapes.add(entity, CircleShape{});
-        world.balls.add(entity, Ball{ball_radius});
+        world.balls.add(entity, Ball{BALL_RADIUS});
 
         // Starts held, with no velocity. serve_system parks it on the paddle
         // until the player launches.
         world.velocities.add(entity, Velocity{});
         world.transforms.find(entity)->position =
-            math::Vec2{world.size.x * 0.5f, ball_start_y};
+            math::Vec2{world.size.x * 0.5f, BALL_START_Y};
 
         return entity;
     }
@@ -79,7 +79,7 @@ namespace game
         }
 
         // Off vertical, so the opening shot is not a straight up-down bounce.
-        velocity->value = math::normalize(math::Vec2{0.45f, 1.0f}) * ball_speed;
+        velocity->value = math::normalize(math::Vec2{0.45f, 1.0f}) * BALL_SPEED;
     }
 
     void start_game(World& world, const Level& level)
@@ -94,7 +94,7 @@ namespace game
 
         world.level = level;
         world.score = 0;
-        world.lives = starting_lives;
+        world.lives = STARTING_LIVES;
         world.state = GameState::Ready;
 
         spawn_paddle(world);
@@ -109,9 +109,9 @@ namespace game
             return;
         }
 
-        const float usable_width = world.size.x - 2.0f * brick_side_margin;
+        const float usable_width = world.size.x - 2.0f * BRICK_SIDE_MARGIN;
         const float cell_width = usable_width / static_cast<float>(level.columns);
-        const float cell_height = brick_height + brick_gap;
+        const float cell_height = BRICK_HEIGHT + BRICK_GAP;
 
         for (int row = 0; row < level.rows; ++row)
         {
@@ -123,14 +123,14 @@ namespace game
                     continue;
                 }
 
-                const float x = brick_side_margin + (static_cast<float>(column) + 0.5f) * cell_width;
-                const float y = world.size.y - brick_top_margin -
+                const float x = BRICK_SIDE_MARGIN + (static_cast<float>(column) + 0.5f) * cell_width;
+                const float y = world.size.y - BRICK_TOP_MARGIN -
                                 (static_cast<float>(row) + 0.5f) * cell_height;
 
                 const core::Entity entity = world.create_entity();
 
                 world.transforms.add(entity, Transform{math::Vec2{x, y},
-                                                       math::Vec2{cell_width - brick_gap, brick_height}});
+                                                       math::Vec2{cell_width - BRICK_GAP, BRICK_HEIGHT}});
                 world.colors.add(entity, brick_color(hit_points));
                 world.bricks.add(entity, Brick{hit_points});
             }

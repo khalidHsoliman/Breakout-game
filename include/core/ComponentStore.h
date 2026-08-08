@@ -19,7 +19,7 @@ namespace core
     public:
         bool has(Entity entity) const
         {
-            return entity.id < m_sparse.size() && m_sparse[entity.id] != invalid_index;
+            return entity.id < m_sparse.size() && m_sparse[entity.id] != INVALID_INDEX;
         }
 
         // Null if the entity has no component of this type.
@@ -52,7 +52,7 @@ namespace core
 
             if (entity.id >= m_sparse.size())
             {
-                m_sparse.resize(entity.id + 1, invalid_index);
+                m_sparse.resize(entity.id + 1, INVALID_INDEX);
             }
 
             m_sparse[entity.id] = m_dense.size();
@@ -81,7 +81,7 @@ namespace core
 
             m_dense.pop_back();
             m_dense_entities.pop_back();
-            m_sparse[entity.id] = invalid_index;
+            m_sparse[entity.id] = INVALID_INDEX;
         }
 
         std::size_t size() const
@@ -106,7 +106,7 @@ namespace core
         }
 
     private:
-        static constexpr std::size_t invalid_index = static_cast<std::size_t>(-1);
+        static constexpr std::size_t INVALID_INDEX = static_cast<std::size_t>(-1);
 
         std::vector<T> m_dense;
         std::vector<Entity> m_dense_entities;

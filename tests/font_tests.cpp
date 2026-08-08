@@ -19,7 +19,7 @@ namespace
     }
 
     // Every string the game puts on screen.
-    constexpr const char* messages[] = {
+    constexpr const char* MESSAGES[] = {
         "SCORE 0123456789",
         "LIVES 3",
         "PRESS SPACE TO LAUNCH",
@@ -46,7 +46,7 @@ TEST(Font, DigitsAndLettersHaveGlyphs)
 // checks the thing the eye would have to catch.
 TEST(Font, EveryCharacterTheGameDisplaysCanBeDrawn)
 {
-    for (const std::string_view message : messages)
+    for (const std::string_view message : MESSAGES)
     {
         for (const char character : message)
         {
@@ -82,14 +82,14 @@ TEST(Font, NoGlyphUsesMoreThanFiveColumns)
     {
         for (const std::uint8_t row : platform::glyph_for(character))
         {
-            EXPECT_LT(row, 1u << platform::glyph_width) << "digit " << character;
+            EXPECT_LT(row, 1u << platform::GLYPH_WIDTH) << "digit " << character;
         }
     }
     for (char character = 'A'; character <= 'Z'; ++character)
     {
         for (const std::uint8_t row : platform::glyph_for(character))
         {
-            EXPECT_LT(row, 1u << platform::glyph_width) << "letter " << character;
+            EXPECT_LT(row, 1u << platform::GLYPH_WIDTH) << "letter " << character;
         }
     }
 }

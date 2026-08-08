@@ -1,12 +1,12 @@
-﻿#include <gtest/gtest.h>
+#include <gtest/gtest.h>
 
 #include "game/Spawn.h"
 #include "game/Systems.h"
 
 namespace
 {
-    constexpr float dt = 1.0f / 60.0f;
-    constexpr float tolerance = 1e-4f;
+    constexpr float DT = 1.0f / 60.0f;
+    constexpr float TOLERANCE = 1e-4f;
 
     game::World make_world()
     {
@@ -47,10 +47,10 @@ TEST(MovementSystem, IntegratesVelocity)
     game::World world = make_world();
     const core::Entity ball = add_ball(world, math::Vec2{100.0f, 100.0f}, math::Vec2{60.0f, 120.0f});
 
-    game::movement_system(world, dt);
+    game::movement_system(world, DT);
 
-    EXPECT_NEAR(world.transforms.find(ball)->position.x, 101.0f, tolerance);
-    EXPECT_NEAR(world.transforms.find(ball)->position.y, 102.0f, tolerance);
+    EXPECT_NEAR(world.transforms.find(ball)->position.x, 101.0f, TOLERANCE);
+    EXPECT_NEAR(world.transforms.find(ball)->position.y, 102.0f, TOLERANCE);
 }
 
 TEST(MovementSystem, LeavesEntitiesWithoutVelocityAlone)
@@ -58,9 +58,9 @@ TEST(MovementSystem, LeavesEntitiesWithoutVelocityAlone)
     game::World world = make_world();
     const core::Entity brick = add_brick(world, math::Vec2{400.0f, 500.0f});
 
-    game::movement_system(world, dt);
+    game::movement_system(world, DT);
 
-    EXPECT_NEAR(world.transforms.find(brick)->position.x, 400.0f, tolerance);
+    EXPECT_NEAR(world.transforms.find(brick)->position.x, 400.0f, TOLERANCE);
 }
 
 TEST(PaddleSystem, MovesLeftAndRight)
@@ -70,13 +70,13 @@ TEST(PaddleSystem, MovesLeftAndRight)
 
     game::Input input;
     input.move_right = true;
-    game::paddle_system(world, input, dt);
-    EXPECT_NEAR(world.transforms.find(paddle)->position.x, 410.0f, tolerance);
+    game::paddle_system(world, input, DT);
+    EXPECT_NEAR(world.transforms.find(paddle)->position.x, 410.0f, TOLERANCE);
 
     input = game::Input{};
     input.move_left = true;
-    game::paddle_system(world, input, dt);
-    EXPECT_NEAR(world.transforms.find(paddle)->position.x, 400.0f, tolerance);
+    game::paddle_system(world, input, DT);
+    EXPECT_NEAR(world.transforms.find(paddle)->position.x, 400.0f, TOLERANCE);
 }
 
 TEST(PaddleSystem, StaysInsideThePlayArea)
@@ -88,11 +88,11 @@ TEST(PaddleSystem, StaysInsideThePlayArea)
     input.move_left = true;
     for (int i = 0; i < 60; ++i)
     {
-        game::paddle_system(world, input, dt);
+        game::paddle_system(world, input, DT);
     }
 
     // Half the paddle width, not zero.
-    EXPECT_NEAR(world.transforms.find(paddle)->position.x, 60.0f, tolerance);
+    EXPECT_NEAR(world.transforms.find(paddle)->position.x, 60.0f, TOLERANCE);
 }
 
 TEST(CollisionSystem, BouncesOffTheLeftWall)
@@ -182,7 +182,7 @@ TEST(Step, ABrickWithOneHitPointIsGoneAfterTheStep)
     const core::Entity brick = add_brick(world, math::Vec2{400.0f, 500.0f}, 1);
     add_ball(world, math::Vec2{400.0f, 482.0f}, math::Vec2{0.0f, 200.0f});
 
-    game::step(world, game::Input{}, dt);
+    game::step(world, game::Input{}, DT);
 
     EXPECT_FALSE(world.bricks.has(brick));
     EXPECT_FALSE(world.transforms.has(brick));
@@ -194,9 +194,9 @@ TEST(Step, ADestroyedBrickStopsCollidingWithinTheSameStep)
     const core::Entity brick = add_brick(world, math::Vec2{400.0f, 500.0f}, 1);
     add_ball(world, math::Vec2{400.0f, 482.0f}, math::Vec2{0.0f, 200.0f});
 
-    game::step(world, game::Input{}, dt);
+    game::step(world, game::Input{}, DT);
     // A second step must not find the brick again.
-    game::step(world, game::Input{}, dt);
+    game::step(world, game::Input{}, DT);
 
     EXPECT_EQ(world.bricks.size(), 0u);
 }
@@ -214,7 +214,7 @@ TEST(Step, IsDeterministic)
         input.move_right = true;
         for (int i = 0; i < steps; ++i)
         {
-            game::step(world, input, dt);
+            game::step(world, input, DT);
         }
         return world.transforms.find(ball)->position;
     };
@@ -236,7 +236,7 @@ TEST(Step, BallNeverEscapesThePlayArea)
 
     for (int i = 0; i < 600; ++i)
     {
-        game::step(world, game::Input{}, dt);
+        game::step(world, game::Input{}, DT);
 
         const math::Vec2 position = world.transforms.find(ball)->position;
         ASSERT_GE(position.x, 0.0f) << "escaped left at step " << i;
@@ -256,7 +256,7 @@ TEST(Step, BouncingOffWallsPreservesSpeed)
 
     for (int i = 0; i < 120; ++i)
     {
-        game::step(world, game::Input{}, dt);
+        game::step(world, game::Input{}, DT);
     }
 
     EXPECT_NEAR(math::length(world.velocities.find(ball)->value), initial_speed, 1e-2f);
@@ -298,7 +298,7 @@ TEST(Lifecycle, ABallStillInPlayCostsNothing)
 
     game::lifecycle_system(world);
 
-    EXPECT_EQ(world.lives, game::starting_lives);
+    EXPECT_EQ(world.lives, game::STARTING_LIVES);
 }
 
 TEST(Scoring, DamagingABrickRecolorsItToTheRemainingToughness)

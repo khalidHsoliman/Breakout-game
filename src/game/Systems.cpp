@@ -1,4 +1,4 @@
-﻿#include <algorithm>
+#include <algorithm>
 #include <cstddef>
 #include <numbers>
 #include <vector>
@@ -15,15 +15,15 @@ namespace game
     {
         // Pushed a fraction further than the overlap, so floating point cannot
         // leave the ball a hair inside and re-trigger the same contact.
-        constexpr float push_out_tolerance = 0.01f;
+        constexpr float PUSH_OUT_TOLERANCE = 0.01f;
 
-        constexpr float max_bounce_angle = std::numbers::pi_v<float> / 3.0f;
+        constexpr float MAX_BOUNCE_ANGLE = std::numbers::pi_v<float> / 3.0f;
 
-        constexpr int points_per_hit = 10;
+        constexpr int POINTS_PER_HIT = 10;
 
         // Gap between the paddle's top and a held ball, so they do not collide
         // the instant it launches.
-        constexpr float serve_gap = 2.0f;
+        constexpr float SERVE_GAP = 2.0f;
 
         math::AABB bounds_of(const Transform& transform)
         {
@@ -35,18 +35,18 @@ namespace game
         {
             if (transform.position.x - radius < 0.0f)
             {
-                transform.position.x = radius + push_out_tolerance;
+                transform.position.x = radius + PUSH_OUT_TOLERANCE;
                 velocity.value = math::reflect(velocity.value, math::Vec2{1.0f, 0.0f});
             }
             else if (transform.position.x + radius > world.size.x)
             {
-                transform.position.x = world.size.x - radius - push_out_tolerance;
+                transform.position.x = world.size.x - radius - PUSH_OUT_TOLERANCE;
                 velocity.value = math::reflect(velocity.value, math::Vec2{-1.0f, 0.0f});
             }
 
             if (transform.position.y + radius > world.size.y)
             {
-                transform.position.y = world.size.y - radius - push_out_tolerance;
+                transform.position.y = world.size.y - radius - PUSH_OUT_TOLERANCE;
                 velocity.value = math::reflect(velocity.value, math::Vec2{0.0f, -1.0f});
             }
 
@@ -73,7 +73,7 @@ namespace game
                     continue;
                 }
 
-                transform.position += contact.normal * (contact.penetration + push_out_tolerance);
+                transform.position += contact.normal * (contact.penetration + PUSH_OUT_TOLERANCE);
 
                 // Where it hit decides where it leaves - the incoming direction
                 // is discarded, which is what gives the player control.
@@ -81,7 +81,7 @@ namespace game
                 const float offset = (transform.position.x - paddle->position.x) / half_width;
                 const float speed = math::length(velocity.value);
 
-                velocity.value = math::paddle_bounce_direction(offset, max_bounce_angle) * speed;
+                velocity.value = math::paddle_bounce_direction(offset, MAX_BOUNCE_ANGLE) * speed;
                 return;
             }
         }
@@ -93,7 +93,7 @@ namespace game
 
             // Resolve only the deepest contact. Reflecting off several bricks in
             // one step can cancel out and send the ball straight through.
-            core::Entity hit_entity = core::null_entity;
+            core::Entity hit_entity = core::NULL_ENTITY;
             math::Contact deepest;
 
             for (std::size_t i = 0; i < world.bricks.size(); ++i)
@@ -118,12 +118,12 @@ namespace game
                 }
             }
 
-            if (hit_entity == core::null_entity)
+            if (hit_entity == core::NULL_ENTITY)
             {
                 return;
             }
 
-            transform.position += deepest.normal * (deepest.penetration + push_out_tolerance);
+            transform.position += deepest.normal * (deepest.penetration + PUSH_OUT_TOLERANCE);
             velocity.value = math::reflect(velocity.value, deepest.normal);
 
             Brick* brick = world.bricks.find(hit_entity);
@@ -133,7 +133,7 @@ namespace game
 
                 // Per hit rather than per brick, so a tough brick is worth more
                 // without needing to remember what it started at.
-                world.score += points_per_hit;
+                world.score += POINTS_PER_HIT;
 
                 if (brick->hit_points <= 0)
                 {
@@ -283,7 +283,7 @@ namespace game
             // Parked on the paddle, so moving the paddle aims the shot.
             transform->position = math::Vec2{
                 paddle->position.x,
-                paddle->position.y + paddle->size.y * 0.5f + balls[i].radius + serve_gap};
+                paddle->position.y + paddle->size.y * 0.5f + balls[i].radius + SERVE_GAP};
         }
 
         if (!input.launch)

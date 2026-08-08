@@ -1,4 +1,4 @@
-﻿#include <glad/gl.h>
+#include <glad/gl.h>
 
 #include <cmath>
 #include <cstddef>
@@ -257,12 +257,12 @@ void main()
         {
             const Glyph glyph = glyph_for(character);
 
-            for (int row = 0; row < glyph_height; ++row)
+            for (int row = 0; row < GLYPH_HEIGHT; ++row)
             {
-                for (int column = 0; column < glyph_width; ++column)
+                for (int column = 0; column < GLYPH_WIDTH; ++column)
                 {
                     const std::uint8_t mask =
-                        static_cast<std::uint8_t>(1u << (glyph_width - 1 - column));
+                        static_cast<std::uint8_t>(1u << (GLYPH_WIDTH - 1 - column));
 
                     if ((glyph[static_cast<std::size_t>(row)] & mask) == 0)
                     {
@@ -273,13 +273,13 @@ void main()
                     // upward, so rows are drawn from the top down.
                     const math::Vec2 center{
                         x + (static_cast<float>(column) + 0.5f) * pixel_size,
-                        position.y + (static_cast<float>(glyph_height - 1 - row) + 0.5f) * pixel_size};
+                        position.y + (static_cast<float>(GLYPH_HEIGHT - 1 - row) + 0.5f) * pixel_size};
 
                     draw_quad(center, math::Vec2{pixel_size, pixel_size}, color);
                 }
             }
 
-            x += static_cast<float>(glyph_width + glyph_spacing) * pixel_size;
+            x += static_cast<float>(GLYPH_WIDTH + GLYPH_SPACING) * pixel_size;
         }
     }
 

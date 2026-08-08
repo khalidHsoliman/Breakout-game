@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <array>
 #include <cstddef>
@@ -22,7 +22,7 @@ namespace platform
         Restart
     };
 
-    inline constexpr std::size_t key_count = 7;
+    inline constexpr std::size_t KEY_COUNT = 7;
 
     class Window
     {
@@ -65,7 +65,7 @@ namespace platform
     private:
         GLFWwindow* m_handle = nullptr;
 
-        std::array<bool, key_count> m_previous_key_state{};
+        std::array<bool, KEY_COUNT> m_previous_key_state{};
 
         bool m_fullscreen = false;
 

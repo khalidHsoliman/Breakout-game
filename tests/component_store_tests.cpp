@@ -4,9 +4,9 @@
 
 namespace
 {
-    constexpr core::Entity a{1};
-    constexpr core::Entity b{2};
-    constexpr core::Entity c{3};
+    constexpr core::Entity ENTITY_A{1};
+    constexpr core::Entity ENTITY_B{2};
+    constexpr core::Entity ENTITY_C{3};
 }
 
 TEST(ComponentStore, EmptyStoreHasNothing)
@@ -14,40 +14,40 @@ TEST(ComponentStore, EmptyStoreHasNothing)
     core::ComponentStore<int> store;
 
     EXPECT_EQ(store.size(), 0u);
-    EXPECT_FALSE(store.has(a));
-    EXPECT_EQ(store.find(a), nullptr);
+    EXPECT_FALSE(store.has(ENTITY_A));
+    EXPECT_EQ(store.find(ENTITY_A), nullptr);
 }
 
 TEST(ComponentStore, AddThenFind)
 {
     core::ComponentStore<int> store;
-    store.add(a, 10);
+    store.add(ENTITY_A, 10);
 
-    EXPECT_TRUE(store.has(a));
-    ASSERT_NE(store.find(a), nullptr);
-    EXPECT_EQ(*store.find(a), 10);
+    EXPECT_TRUE(store.has(ENTITY_A));
+    ASSERT_NE(store.find(ENTITY_A), nullptr);
+    EXPECT_EQ(*store.find(ENTITY_A), 10);
     EXPECT_EQ(store.size(), 1u);
 }
 
 TEST(ComponentStore, AddReplacesExistingComponent)
 {
     core::ComponentStore<int> store;
-    store.add(a, 10);
-    store.add(a, 99);
+    store.add(ENTITY_A, 10);
+    store.add(ENTITY_A, 99);
 
-    ASSERT_NE(store.find(a), nullptr);
-    EXPECT_EQ(*store.find(a), 99);
+    ASSERT_NE(store.find(ENTITY_A), nullptr);
+    EXPECT_EQ(*store.find(ENTITY_A), 99);
     EXPECT_EQ(store.size(), 1u);
 }
 
 TEST(ComponentStore, RemoveMakesEntityAbsent)
 {
     core::ComponentStore<int> store;
-    store.add(a, 10);
-    store.remove(a);
+    store.add(ENTITY_A, 10);
+    store.remove(ENTITY_A);
 
-    EXPECT_FALSE(store.has(a));
-    EXPECT_EQ(store.find(a), nullptr);
+    EXPECT_FALSE(store.has(ENTITY_A));
+    EXPECT_EQ(store.find(ENTITY_A), nullptr);
     EXPECT_EQ(store.size(), 0u);
 }
 
@@ -57,44 +57,44 @@ TEST(ComponentStore, RemoveMakesEntityAbsent)
 TEST(ComponentStore, RemoveFromMiddleKeepsOtherEntitiesReachable)
 {
     core::ComponentStore<int> store;
-    store.add(a, 10);
-    store.add(b, 20);
-    store.add(c, 30);
+    store.add(ENTITY_A, 10);
+    store.add(ENTITY_B, 20);
+    store.add(ENTITY_C, 30);
 
-    store.remove(b);
+    store.remove(ENTITY_B);
 
-    EXPECT_FALSE(store.has(b));
+    EXPECT_FALSE(store.has(ENTITY_B));
     EXPECT_EQ(store.size(), 2u);
 
-    ASSERT_NE(store.find(a), nullptr);
-    ASSERT_NE(store.find(c), nullptr);
-    EXPECT_EQ(*store.find(a), 10);
-    EXPECT_EQ(*store.find(c), 30);
+    ASSERT_NE(store.find(ENTITY_A), nullptr);
+    ASSERT_NE(store.find(ENTITY_C), nullptr);
+    EXPECT_EQ(*store.find(ENTITY_A), 10);
+    EXPECT_EQ(*store.find(ENTITY_C), 30);
 }
 
 TEST(ComponentStore, RemoveLastElement)
 {
     core::ComponentStore<int> store;
-    store.add(a, 10);
-    store.add(b, 20);
+    store.add(ENTITY_A, 10);
+    store.add(ENTITY_B, 20);
 
-    store.remove(b);
+    store.remove(ENTITY_B);
 
-    EXPECT_FALSE(store.has(b));
-    ASSERT_NE(store.find(a), nullptr);
-    EXPECT_EQ(*store.find(a), 10);
+    EXPECT_FALSE(store.has(ENTITY_B));
+    ASSERT_NE(store.find(ENTITY_A), nullptr);
+    EXPECT_EQ(*store.find(ENTITY_A), 10);
     EXPECT_EQ(store.size(), 1u);
 }
 
 TEST(ComponentStore, RemoveOfUnknownEntityIsANoOp)
 {
     core::ComponentStore<int> store;
-    store.add(a, 10);
+    store.add(ENTITY_A, 10);
 
-    store.remove(b);
+    store.remove(ENTITY_B);
 
     EXPECT_EQ(store.size(), 1u);
-    EXPECT_TRUE(store.has(a));
+    EXPECT_TRUE(store.has(ENTITY_A));
 }
 
 // The invariant every system relies on: entities()[i] owns components()[i],
@@ -102,10 +102,10 @@ TEST(ComponentStore, RemoveOfUnknownEntityIsANoOp)
 TEST(ComponentStore, DenseArraysStayParallelAfterRemoval)
 {
     core::ComponentStore<int> store;
-    store.add(a, 10);
-    store.add(b, 20);
-    store.add(c, 30);
-    store.remove(a);
+    store.add(ENTITY_A, 10);
+    store.add(ENTITY_B, 20);
+    store.add(ENTITY_C, 30);
+    store.remove(ENTITY_A);
 
     ASSERT_EQ(store.entities().size(), store.size());
     ASSERT_EQ(store.components().size(), store.size());
@@ -132,9 +132,9 @@ TEST(ComponentStore, HandlesSparseEntityIds)
 TEST(ComponentStore, ComponentsCanBeMutatedThroughFind)
 {
     core::ComponentStore<int> store;
-    store.add(a, 10);
+    store.add(ENTITY_A, 10);
 
-    *store.find(a) = 55;
+    *store.find(ENTITY_A) = 55;
 
-    EXPECT_EQ(*store.find(a), 55);
+    EXPECT_EQ(*store.find(ENTITY_A), 55);
 }

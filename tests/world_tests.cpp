@@ -16,7 +16,7 @@ TEST(World, CreateEntityNeverReturnsNullEntity)
 {
     game::World world;
 
-    EXPECT_FALSE(world.create_entity() == core::null_entity);
+    EXPECT_FALSE(world.create_entity() == core::NULL_ENTITY);
 }
 
 TEST(World, DestroyEntityRemovesAllOfItsComponents)

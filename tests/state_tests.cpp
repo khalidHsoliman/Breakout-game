@@ -5,9 +5,9 @@
 
 namespace
 {
-    constexpr float dt = 1.0f / 60.0f;
+    constexpr float DT = 1.0f / 60.0f;
 
-    constexpr const char* one_brick = R"(
+    constexpr const char* ONE_BRICK = R"(
 1
 )";
 
@@ -15,7 +15,7 @@ namespace
     {
         game::World world;
         world.size = math::Vec2{800.0f, 600.0f};
-        game::start_game(world, game::parse_level(one_brick));
+        game::start_game(world, game::parse_level(ONE_BRICK));
         return world;
     }
 
@@ -50,7 +50,7 @@ TEST(StateMachine, TheHeldBallFollowsThePaddle)
     input.move_right = true;
     for (int i = 0; i < 30; ++i)
     {
-        game::step(world, input, dt);
+        game::step(world, input, DT);
     }
 
     const core::Entity ball = world.balls.entities()[0];
@@ -65,7 +65,7 @@ TEST(StateMachine, LaunchingStartsPlay)
 {
     game::World world = started_world();
 
-    game::step(world, launch_input(), dt);
+    game::step(world, launch_input(), DT);
 
     EXPECT_EQ(world.state, game::GameState::Playing);
     EXPECT_GT(world.velocities.find(world.balls.entities()[0])->value.y, 0.0f);
@@ -74,15 +74,15 @@ TEST(StateMachine, LaunchingStartsPlay)
 TEST(StateMachine, NothingMovesWhilePaused)
 {
     game::World world = started_world();
-    game::step(world, launch_input(), dt);
+    game::step(world, launch_input(), DT);
 
     const math::Vec2 before = world.transforms.find(world.balls.entities()[0])->position;
-    game::step(world, pause_input(), dt);
+    game::step(world, pause_input(), DT);
     ASSERT_EQ(world.state, game::GameState::Paused);
 
     for (int i = 0; i < 60; ++i)
     {
-        game::step(world, game::Input{}, dt);
+        game::step(world, game::Input{}, DT);
     }
 
     const math::Vec2 after = world.transforms.find(world.balls.entities()[0])->position;
@@ -93,12 +93,12 @@ TEST(StateMachine, NothingMovesWhilePaused)
 TEST(StateMachine, PauseTogglesBackToPlaying)
 {
     game::World world = started_world();
-    game::step(world, launch_input(), dt);
+    game::step(world, launch_input(), DT);
 
-    game::step(world, pause_input(), dt);
+    game::step(world, pause_input(), DT);
     ASSERT_EQ(world.state, game::GameState::Paused);
 
-    game::step(world, pause_input(), dt);
+    game::step(world, pause_input(), DT);
     EXPECT_EQ(world.state, game::GameState::Playing);
 }
 
@@ -107,11 +107,11 @@ TEST(StateMachine, PauseTogglesBackToPlaying)
 TEST(StateMachine, PauseAppliedTwiceInOneFrameWouldToggleTwice)
 {
     game::World world = started_world();
-    game::step(world, launch_input(), dt);
+    game::step(world, launch_input(), DT);
 
     const game::Input held = pause_input();
-    game::step(world, held, dt);
-    game::step(world, held, dt);
+    game::step(world, held, DT);
+    game::step(world, held, DT);
 
     // Back where it started - which is why main clears one-shots after the
     // first step that consumes them.
@@ -121,12 +121,12 @@ TEST(StateMachine, PauseAppliedTwiceInOneFrameWouldToggleTwice)
 TEST(StateMachine, ClearingOneShotsMakesTheSecondStepHarmless)
 {
     game::World world = started_world();
-    game::step(world, launch_input(), dt);
+    game::step(world, launch_input(), DT);
 
     game::Input input = pause_input();
-    game::step(world, input, dt);
+    game::step(world, input, DT);
     input.clear_one_shots();
-    game::step(world, input, dt);
+    game::step(world, input, DT);
 
     EXPECT_EQ(world.state, game::GameState::Paused);
 }
@@ -134,11 +134,11 @@ TEST(StateMachine, ClearingOneShotsMakesTheSecondStepHarmless)
 TEST(StateMachine, ClearingTheLastBrickWins)
 {
     game::World world = started_world();
-    game::step(world, launch_input(), dt);
+    game::step(world, launch_input(), DT);
 
     for (int i = 0; i < 600 && world.state == game::GameState::Playing; ++i)
     {
-        game::step(world, game::Input{}, dt);
+        game::step(world, game::Input{}, DT);
     }
 
     EXPECT_EQ(world.state, game::GameState::Won);
@@ -154,10 +154,10 @@ TEST(StateMachine, RestartFromGameOverRebuildsTheLevel)
 
     game::Input input;
     input.restart = true;
-    game::step(world, input, dt);
+    game::step(world, input, DT);
 
     EXPECT_EQ(world.state, game::GameState::Ready);
-    EXPECT_EQ(world.lives, game::starting_lives);
+    EXPECT_EQ(world.lives, game::STARTING_LIVES);
     EXPECT_EQ(world.score, 0);
     EXPECT_EQ(world.bricks.size(), 1u);
 }
@@ -165,12 +165,12 @@ TEST(StateMachine, RestartFromGameOverRebuildsTheLevel)
 TEST(StateMachine, RestartDoesNothingWhilePlaying)
 {
     game::World world = started_world();
-    game::step(world, launch_input(), dt);
+    game::step(world, launch_input(), DT);
     world.score = 250;
 
     game::Input input;
     input.restart = true;
-    game::step(world, input, dt);
+    game::step(world, input, DT);
 
     EXPECT_EQ(world.state, game::GameState::Playing);
     EXPECT_EQ(world.score, 250);

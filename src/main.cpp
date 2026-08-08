@@ -12,25 +12,25 @@
 namespace
 {
     // Starting mode only - F11 toggles at runtime.
-    constexpr bool start_fullscreen = false;
+    constexpr bool START_FULLSCREEN = false;
 
     // Used for windowed mode, whether that is at startup or after a toggle.
-    constexpr int window_width = 800;
-    constexpr int window_height = 600;
+    constexpr int WINDOW_WIDTH = 800;
+    constexpr int WINDOW_HEIGHT = 600;
 
     // World units. Currently 1:1 with pixels at the default window size, but
     // nothing in the game may rely on that.
-    constexpr math::Vec2 world_size{800.0f, 600.0f};
+    constexpr math::Vec2 WORLD_SIZE{800.0f, 600.0f};
 
     // The game always advances in these increments, whatever the frame rate.
-    constexpr float fixed_dt = 1.0f / 60.0f;
+    constexpr float FIXED_DT = 1.0f / 60.0f;
 
     // A long stall must not queue up seconds of catch-up work: past this many
     // steps the leftover time is dropped instead.
-    constexpr int max_steps_per_frame = 5;
+    constexpr int MAX_STEPS_PER_FRAME = 5;
 
     // Digits are hit points; anything else is an empty cell.
-    constexpr const char* first_level = R"(
+    constexpr const char* FIRST_LEVEL = R"(
 ..111111..
 .12222221.
 1233333321
@@ -51,45 +51,43 @@ namespace
         input.restart |= window.is_key_pressed(platform::Key::Restart);
     }
 
-    constexpr float hud_pixel = 3.0f;
-    constexpr float headline_pixel = 6.0f;
-    constexpr float prompt_pixel = 3.0f;
+    constexpr float HUD_PIXEL = 3.0f;
+    constexpr float HEADLINE_PIXEL = 6.0f;
+    constexpr float PROMPT_PIXEL = 3.0f;
 
-    const core::Color hud_color{0.85f, 0.88f, 0.92f};
+    constexpr core::Color HUD_COLOR{0.85f, 0.88f, 0.92f};
 
     void draw_centered(platform::Renderer& renderer, std::string_view text,
                        float y, float pixel_size, core::Color color)
     {
-        const float x = (world_size.x - platform::text_width(text, pixel_size)) * 0.5f;
+        const float x = (WORLD_SIZE.x - platform::text_width(text, pixel_size)) * 0.5f;
         renderer.draw_text(text, math::Vec2{x, y}, pixel_size, color);
     }
 
-    // Everything the player is told. Which message belongs to which state is a
-    // presentation decision, so it lives here rather than in game/.
     void render_hud(const game::World& world, platform::Renderer& renderer)
     {
         const std::string score = "SCORE " + std::to_string(world.score);
-        renderer.draw_text(score, math::Vec2{20.0f, 568.0f}, hud_pixel, hud_color);
+        renderer.draw_text(score, math::Vec2{20.0f, 568.0f}, HUD_PIXEL, HUD_COLOR);
 
         const std::string lives = "LIVES " + std::to_string(world.lives);
-        const float lives_x = world_size.x - 20.0f - platform::text_width(lives, hud_pixel);
-        renderer.draw_text(lives, math::Vec2{lives_x, 568.0f}, hud_pixel, hud_color);
+        const float lives_x = WORLD_SIZE.x - 20.0f - platform::text_width(lives, HUD_PIXEL);
+        renderer.draw_text(lives, math::Vec2{lives_x, 568.0f}, HUD_PIXEL, HUD_COLOR);
 
         switch (world.state)
         {
         case game::GameState::Ready:
-            draw_centered(renderer, "PRESS SPACE TO LAUNCH", 200.0f, prompt_pixel, hud_color);
+            draw_centered(renderer, "PRESS SPACE TO LAUNCH", 200.0f, PROMPT_PIXEL, HUD_COLOR);
             break;
         case game::GameState::Paused:
-            draw_centered(renderer, "PAUSED", 300.0f, headline_pixel, hud_color);
+            draw_centered(renderer, "PAUSED", 300.0f, HEADLINE_PIXEL, HUD_COLOR);
             break;
         case game::GameState::GameOver:
-            draw_centered(renderer, "GAME OVER", 320.0f, headline_pixel, core::Color{0.92f, 0.45f, 0.45f});
-            draw_centered(renderer, "PRESS R TO RESTART", 270.0f, prompt_pixel, hud_color);
+            draw_centered(renderer, "GAME OVER", 320.0f, HEADLINE_PIXEL, core::Color{0.92f, 0.45f, 0.45f});
+            draw_centered(renderer, "PRESS R TO RESTART", 270.0f, PROMPT_PIXEL, HUD_COLOR);
             break;
         case game::GameState::Won:
-            draw_centered(renderer, "YOU WIN", 320.0f, headline_pixel, core::Color{0.60f, 0.90f, 0.55f});
-            draw_centered(renderer, "PRESS R TO RESTART", 270.0f, prompt_pixel, hud_color);
+            draw_centered(renderer, "YOU WIN", 320.0f, HEADLINE_PIXEL, core::Color{0.60f, 0.90f, 0.55f});
+            draw_centered(renderer, "PRESS R TO RESTART", 270.0f, PROMPT_PIXEL, HUD_COLOR);
             break;
         case game::GameState::Playing:
             break;
@@ -125,20 +123,20 @@ namespace
 int main()
 {
     platform::Window window;
-    if (!window.init(window_width, window_height, "Breakout", start_fullscreen))
+    if (!window.init(WINDOW_WIDTH, WINDOW_HEIGHT, "Breakout", START_FULLSCREEN))
     {
         return 1;
     }
 
     platform::Renderer renderer;
-    if (!renderer.init(world_size, window.framebuffer_size()))
+    if (!renderer.init(WORLD_SIZE, window.framebuffer_size()))
     {
         return 1;
     }
 
     game::World world;
-    world.size = world_size;
-    game::start_game(world, game::parse_level(first_level));
+    world.size = WORLD_SIZE;
+    game::start_game(world, game::parse_level(FIRST_LEVEL));
 
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
     float accumulator = 0.0f;
@@ -166,18 +164,18 @@ int main()
         read_input(window, input);
 
         int steps = 0;
-        while (accumulator >= fixed_dt && steps < max_steps_per_frame)
+        while (accumulator >= FIXED_DT && steps < MAX_STEPS_PER_FRAME)
         {
-            game::step(world, input, fixed_dt);
+            game::step(world, input, FIXED_DT);
 
             // Consumed. Held state is refreshed next frame regardless.
             input.clear_one_shots();
 
-            accumulator -= fixed_dt;
+            accumulator -= FIXED_DT;
             ++steps;
         }
 
-        if (steps == max_steps_per_frame)
+        if (steps == MAX_STEPS_PER_FRAME)
         {
             accumulator = 0.0f;
         }

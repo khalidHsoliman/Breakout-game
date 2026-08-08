@@ -11,7 +11,7 @@
 
 namespace game
 {
-    inline constexpr int starting_lives = 3;
+    inline constexpr int STARTING_LIVES = 3;
 
     enum class GameState
     {
@@ -37,7 +37,7 @@ namespace game
         // Singletons: exactly one of each, so plain members rather than a
         // component store holding a single entry.
         int score = 0;
-        int lives = starting_lives;
+        int lives = STARTING_LIVES;
         GameState state = GameState::Ready;
 
         // Kept so a restart can rebuild without main handing it back
