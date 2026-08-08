@@ -76,6 +76,31 @@ namespace
 
     constexpr const char* LEVEL_FILE_NAME = "custom-level.txt";
 
+
+    constexpr float BORDER_THICKNESS = 6.0f;
+    constexpr core::Color BORDER_COLOR{0.28f, 0.32f, 0.38f};
+
+    void render_borders(platform::Renderer& renderer)
+    {
+        const float half = BORDER_THICKNESS * 0.5f;
+
+        renderer.draw_quad(
+            math::Vec2{half, WORLD_SIZE.y * 0.5f},
+            math::Vec2{BORDER_THICKNESS, WORLD_SIZE.y},
+            BORDER_COLOR
+        );
+        renderer.draw_quad(
+            math::Vec2{WORLD_SIZE.x - half, WORLD_SIZE.y * 0.5f},
+            math::Vec2{BORDER_THICKNESS, WORLD_SIZE.y},
+            BORDER_COLOR
+        );
+        renderer.draw_quad(
+            math::Vec2{WORLD_SIZE.x * 0.5f, WORLD_SIZE.y - half},
+            math::Vec2{WORLD_SIZE.x, BORDER_THICKNESS},
+            BORDER_COLOR
+        );
+    }
+
     void draw_centered(
         platform::Renderer& renderer,
         std::string_view text,
@@ -329,6 +354,9 @@ int main()
             render_world(world, renderer);
             render_hud(world, renderer);
         }
+
+        // Both modes share the play area, so both get the frame.
+        render_borders(renderer);
 
         renderer.end_frame();
 
