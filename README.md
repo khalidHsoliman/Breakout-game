@@ -11,6 +11,8 @@ It ships with an in-game level editor. Levels are plain text, so one built with
 the mouse, one typed in Notepad and the one built into the game are the same
 kind of thing.
 
+**A prebuilt Windows build is on the releases page.**
+
 ## Building
 
 Requires Visual Studio 2022 and CMake 3.21 or newer. The first configure
