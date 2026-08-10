@@ -305,6 +305,10 @@ int main()
 
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
         accumulator += std::chrono::duration<float>(now - previous).count();
+
+        // to avoid a long stall queuing up seconds of catch-up work, drop any
+        // leftover time past a certain number of steps.
+        accumulator = std::min(accumulator, MAX_STEPS_PER_FRAME * game::FIXED_DT);
         previous = now;
 
         if (mode == AppMode::Editing)
@@ -356,8 +360,7 @@ int main()
         {
             read_input(window, input);
 
-            int steps = 0;
-            while (accumulator >= game::FIXED_DT && steps < MAX_STEPS_PER_FRAME)
+            while (accumulator >= game::FIXED_DT)
             {
                 game::step(world, input, game::FIXED_DT);
 
@@ -368,12 +371,6 @@ int main()
                 input.clear_one_shots();
 
                 accumulator -= game::FIXED_DT;
-                ++steps;
-            }
-
-            if (steps == MAX_STEPS_PER_FRAME)
-            {
-                accumulator = 0.0f;
             }
 
             for (const game::GameEvent event : world.events)
