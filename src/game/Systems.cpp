@@ -6,6 +6,7 @@
 #include "game/Spawn.h"
 #include "game/Systems.h"
 #include "math/Collision.h"
+#include "math/Lerp.h"
 
 namespace game
 {
@@ -341,7 +342,7 @@ namespace game
             }
 
             // What is left of its life is what is left of its opacity.
-            world.colors.find(entity)->a = particle.lifetime / particle.max_life;
+            world.colors.find(entity)->a = math::smoothstep(particle.lifetime / particle.max_life);
             world.velocities.find(entity)->value.y -= PARTICLE_GRAVITY * dt;
         }
     }
