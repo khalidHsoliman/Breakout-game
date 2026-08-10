@@ -110,6 +110,18 @@ namespace game
             }
         }
 
+        // Once per step, before anything moves.
+        void remember_positions(World& world)
+        {
+            const std::vector<core::Entity>& entities = world.transforms.entities();
+
+            for (std::size_t i = 0; i < world.transforms.size(); i++)
+            {
+                Transform& transform = *world.transforms.find(entities[i]);
+                transform.previous_position = transform.position;
+            }
+        }
+
         void bounce_off_bricks(World& world, Transform& transform, Velocity& velocity, float radius)
         {
             const math::Circle ball{transform.position, radius};
@@ -397,6 +409,8 @@ namespace game
 
     void step(World& world, const Input& input, float dt)
     {
+        remember_positions(world);
+
         // Runs first and in every state
         transition_system(world, input);
 

@@ -58,10 +58,11 @@ namespace game
     core::Entity spawn_paddle(World& world)
     {
         const core::Entity entity = world.create_entity();
+        const math::Vec2 position{world.size.x * 0.5f, PADDLE_Y};
 
         world.transforms.add(
             entity,
-            Transform{math::Vec2{world.size.x * 0.5f, PADDLE_Y}, math::Vec2{PADDLE_WIDTH, PADDLE_HEIGHT}}
+            Transform{position, math::Vec2{PADDLE_WIDTH, PADDLE_HEIGHT}, position}
         );
         world.colors.add(entity, core::Color{0.90f, 0.90f, 0.90f});
         world.paddles.add(entity, Paddle{PADDLE_SPEED});
@@ -72,10 +73,11 @@ namespace game
     core::Entity spawn_ball(World& world)
     {
         const core::Entity entity = world.create_entity();
+        const math::Vec2 position{world.size.x * 0.5f, BALL_START_Y};
 
         world.transforms.add(
             entity,
-            Transform{math::Vec2{}, math::Vec2{BALL_RADIUS * 2.0f, BALL_RADIUS * 2.0f}}
+            Transform{position, math::Vec2{BALL_RADIUS * 2.0f, BALL_RADIUS * 2.0f}, position}
         );
         world.colors.add(entity, core::Color{0.95f, 0.65f, 0.25f});
         world.circle_shapes.add(entity, CircleShape{});
@@ -84,8 +86,6 @@ namespace game
         // Starts held, with no velocity. serve_system parks it on the paddle
         // until the player launches.
         world.velocities.add(entity, Velocity{});
-        world.transforms.find(entity)->position =
-            math::Vec2{world.size.x * 0.5f, BALL_START_Y};
 
         return entity;
     }
@@ -106,7 +106,7 @@ namespace game
             const float p_speed = random_range(PARTICLE_MIN_SPEED, PARTICLE_MAX_SPEED);
             const float p_life = random_range(PARTICLE_MIN_LIFE, PARTICLE_MAX_LIFE);
 
-            world.transforms.add(entity, Transform{position, math::Vec2{p_size, p_size}});
+            world.transforms.add(entity, Transform{position, math::Vec2{p_size, p_size}, position});
             world.velocities.add(entity, Velocity{math::Vec2{std::cos(p_angle), std::sin(p_angle)} * p_speed});
             world.colors.add(entity, color);
             world.particles.add(entity, Particle{p_life, p_life});
@@ -166,11 +166,9 @@ namespace game
                 }
 
                 const core::Entity entity = world.create_entity();
+                const math::Vec2 center = brick_center(level, world.size, column, row);
 
-                world.transforms.add(
-                    entity,
-                    Transform{brick_center(level, world.size, column, row), size}
-                );
+                world.transforms.add(entity, Transform{center, size, center});
                 world.colors.add(entity, brick_color(hit_points));
                 world.bricks.add(entity, Brick{hit_points});
             }

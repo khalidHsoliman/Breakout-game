@@ -9,6 +9,11 @@ namespace game
     {
         math::Vec2 position;
         math::Vec2 size;
+
+        // Where it was when the step began. Rendering draws between this and
+        // position, so motion stays smooth on a display refreshing faster than
+        // the game steps.
+        math::Vec2 previous_position;
     };
 
     // Tag: draw this entity as a circle rather than a rectangle, using half of

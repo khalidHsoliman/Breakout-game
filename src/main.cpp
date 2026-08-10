@@ -110,7 +110,9 @@ namespace
         renderer.draw_text(text, math::Vec2{x, y}, pixel_size, color);
     }
 
-    void render_world(const game::World& world, platform::Renderer& renderer)
+    // step_fraction is how far past the last simulated step this frame is, so
+    // motion stays smooth on a display refreshing faster than the game steps.
+    void render_world(const game::World& world, platform::Renderer& renderer, float step_fraction)
     {
         const std::vector<core::Entity>& entities = world.transforms.entities();
         const std::vector<game::Transform>& transforms = world.transforms.components();
@@ -124,13 +126,15 @@ namespace
                 continue;
             }
 
+            const math::Vec2 position = math::lerp(transforms[i].previous_position, transforms[i].position, step_fraction);
+
             if (world.circle_shapes.has(entity))
             {
-                renderer.draw_circle(transforms[i].position, transforms[i].size.x * 0.5f, *color);
+                renderer.draw_circle(position, transforms[i].size.x * 0.5f, *color);
             }
             else
             {
-                renderer.draw_quad(transforms[i].position, transforms[i].size, *color);
+                renderer.draw_quad(position, transforms[i].size, *color);
             }
         }
     }
@@ -400,7 +404,7 @@ int main()
         }
         else
         {
-            render_world(world, renderer);
+            render_world(world, renderer, accumulator / game::FIXED_DT);
             render_hud(world, renderer);
         }
 
