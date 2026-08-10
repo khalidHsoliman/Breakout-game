@@ -24,11 +24,14 @@ layout (location = 1) in vec4 a_color;
 
 uniform vec2 u_world_size;
 
+// Screen shake, in world units.
+uniform vec2 u_shake;
+
 out vec4 v_color;
 
 void main()
 {
-    vec2 ndc = (a_position / u_world_size) * 2.0 - 1.0;
+    vec2 ndc = ((a_position + u_shake) / u_world_size) * 2.0 - 1.0;
     gl_Position = vec4(ndc, 0.0, 1.0);
     v_color = a_color;
 }
@@ -151,6 +154,7 @@ void main()
 
         glUseProgram(program);
         glUniform2f(glGetUniformLocation(program, "u_world_size"), world_size.x, world_size.y);
+        m_shake_location = glGetUniformLocation(program, "u_shake");
 
         m_program = program;
         m_vao = vao;
@@ -182,6 +186,11 @@ void main()
         glDeleteBuffers(1, &m_vbo);
         glDeleteVertexArrays(1, &m_vao);
         glDeleteProgram(m_program);
+    }
+
+    void Renderer::set_shake(math::Vec2 offset)
+    {
+        m_shake = offset;
     }
 
     void Renderer::begin_frame()
@@ -313,6 +322,7 @@ void main()
         );
 
         glUseProgram(m_program);
+        glUniform2f(m_shake_location, m_shake.x, m_shake.y);
         glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(m_vertices.size()));
 
         glBindVertexArray(0);

@@ -3,6 +3,7 @@
 #include <numbers>
 
 #include "game/LevelLayout.h"
+#include "math/Lerp.h"
 #include "game/Spawn.h"
 
 namespace game
@@ -26,7 +27,7 @@ namespace game
 
         float random_range(float low, float high)
         {
-            return low + (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * (high - low);
+            return math::lerp(low, high, static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX));
         }
 
         constexpr float BALL_RADIUS = 8.0f;

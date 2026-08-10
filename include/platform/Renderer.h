@@ -31,6 +31,9 @@ namespace platform
         // toggling fullscreen.
         void set_viewport(math::Vec2 framebuffer_size);
 
+        // Moves everything drawn this frame by an offset in world units.
+        void set_shake(math::Vec2 offset);
+
         // Turns a cursor pixel (top-left origin, y down) into a world position
         math::Vec2 world_from_pixel(math::Vec2 pixel) const;
 
@@ -58,6 +61,9 @@ namespace platform
         unsigned int m_program = 0;
         unsigned int m_vao = 0;
         unsigned int m_vbo = 0;
+
+        math::Vec2 m_shake;
+        int m_shake_location = -1;
 
         Viewport m_viewport;
         math::Vec2 m_framebuffer_size;

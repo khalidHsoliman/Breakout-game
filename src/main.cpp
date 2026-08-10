@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -8,6 +10,7 @@
 #include "game/LevelLayout.h"
 #include "game/Spawn.h"
 #include "game/Systems.h"
+#include "math/Lerp.h"
 #include "platform/Audio.h"
 #include "platform/FileSystem.h"
 #include "platform/Font.h"
@@ -50,18 +53,7 @@ namespace
 ..111111..
 )";
 
-    // Held state is overwritten each frame. One-shot actions are OR-ed in and
-    // survive until a step consumes them, because a frame can run zero steps
-    // (the press would be lost) or several (it would fire more than once).
-    void read_input(const platform::Window& window, game::Input& input)
-    {
-        input.move_left = window.is_key_down(platform::Key::MoveLeft);
-        input.move_right = window.is_key_down(platform::Key::MoveRight);
-
-        input.launch |= window.is_key_pressed(platform::Key::Launch);
-        input.toggle_pause |= window.is_key_pressed(platform::Key::Pause);
-        input.restart |= window.is_key_pressed(platform::Key::Restart);
-    }
+    constexpr const char* LEVEL_FILE_NAME = "custom-level.txt";
 
     constexpr float HUD_PIXEL = 3.0f;
     constexpr float HEADLINE_PIXEL = 6.0f;
@@ -76,31 +68,34 @@ namespace
     constexpr core::Color EMPTY_CELL_COLOR{0.16f, 0.18f, 0.22f};
     constexpr float CURSOR_BORDER = 3.0f;
 
-    constexpr const char* LEVEL_FILE_NAME = "custom-level.txt";
-
-
     constexpr float BORDER_THICKNESS = 6.0f;
     constexpr core::Color BORDER_COLOR{0.28f, 0.32f, 0.38f};
 
-    void render_borders(platform::Renderer& renderer)
-    {
-        const float half = BORDER_THICKNESS * 0.5f;
+    // Screen shake.
+    constexpr float SHAKE_MAGNITUDE = 4.0f;
+    constexpr float SHAKE_DECAY = 22.0f;
 
-        renderer.draw_quad(
-            math::Vec2{half, WORLD_SIZE.y * 0.5f},
-            math::Vec2{BORDER_THICKNESS, WORLD_SIZE.y},
-            BORDER_COLOR
-        );
-        renderer.draw_quad(
-            math::Vec2{WORLD_SIZE.x - half, WORLD_SIZE.y * 0.5f},
-            math::Vec2{BORDER_THICKNESS, WORLD_SIZE.y},
-            BORDER_COLOR
-        );
-        renderer.draw_quad(
-            math::Vec2{WORLD_SIZE.x * 0.5f, WORLD_SIZE.y - half},
-            math::Vec2{WORLD_SIZE.x, BORDER_THICKNESS},
-            BORDER_COLOR
-        );
+    // Held state is overwritten each frame. One-shot actions are OR-ed in and
+    // survive until a step consumes them.
+    void read_input(const platform::Window& window, game::Input& input)
+    {
+        input.move_left = window.is_key_down(platform::Key::MoveLeft);
+        input.move_right = window.is_key_down(platform::Key::MoveRight);
+
+        input.launch |= window.is_key_pressed(platform::Key::Launch);
+        input.toggle_pause |= window.is_key_pressed(platform::Key::Pause);
+        input.restart |= window.is_key_pressed(platform::Key::Restart);
+    }
+
+    math::Vec2 shake_offset(float magnitude)
+    {
+        const float x = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+        const float y = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+
+        return math::Vec2{
+            math::lerp(-magnitude, magnitude, x),
+            math::lerp(-magnitude, magnitude, y)
+        };
     }
 
     void draw_centered(
@@ -113,6 +108,31 @@ namespace
     {
         const float x = (WORLD_SIZE.x - platform::text_width(text, pixel_size)) * 0.5f;
         renderer.draw_text(text, math::Vec2{x, y}, pixel_size, color);
+    }
+
+    void render_world(const game::World& world, platform::Renderer& renderer)
+    {
+        const std::vector<core::Entity>& entities = world.transforms.entities();
+        const std::vector<game::Transform>& transforms = world.transforms.components();
+
+        for (std::size_t i = 0; i < transforms.size(); i++)
+        {
+            const core::Entity entity = entities[i];
+            const core::Color* color = world.colors.find(entity);
+            if (color == nullptr)
+            {
+                continue;
+            }
+
+            if (world.circle_shapes.has(entity))
+            {
+                renderer.draw_circle(transforms[i].position, transforms[i].size.x * 0.5f, *color);
+            }
+            else
+            {
+                renderer.draw_quad(transforms[i].position, transforms[i].size, *color);
+            }
+        }
     }
 
     void render_hud(const game::World& world, platform::Renderer& renderer)
@@ -143,31 +163,6 @@ namespace
             break;
         case game::GameState::Playing:
             break;
-        }
-    }
-
-    void render_world(const game::World& world, platform::Renderer& renderer)
-    {
-        const std::vector<core::Entity>& entities = world.transforms.entities();
-        const std::vector<game::Transform>& transforms = world.transforms.components();
-
-        for (std::size_t i = 0; i < transforms.size(); i++)
-        {
-            const core::Entity entity = entities[i];
-            const core::Color* color = world.colors.find(entity);
-            if (color == nullptr)
-            {
-                continue;
-            }
-
-            if (world.circle_shapes.has(entity))
-            {
-                renderer.draw_circle(transforms[i].position, transforms[i].size.x * 0.5f, *color);
-            }
-            else
-            {
-                renderer.draw_quad(transforms[i].position, transforms[i].size, *color);
-            }
         }
     }
 
@@ -211,6 +206,27 @@ namespace
             draw_centered(renderer, status, 70.0f, PROMPT_PIXEL, status_color);
         }
     }
+
+    void render_borders(platform::Renderer& renderer)
+    {
+        const float half = BORDER_THICKNESS * 0.5f;
+
+        renderer.draw_quad(
+            math::Vec2{half, WORLD_SIZE.y * 0.5f},
+            math::Vec2{BORDER_THICKNESS, WORLD_SIZE.y},
+            BORDER_COLOR
+        );
+        renderer.draw_quad(
+            math::Vec2{WORLD_SIZE.x - half, WORLD_SIZE.y * 0.5f},
+            math::Vec2{BORDER_THICKNESS, WORLD_SIZE.y},
+            BORDER_COLOR
+        );
+        renderer.draw_quad(
+            math::Vec2{WORLD_SIZE.x * 0.5f, WORLD_SIZE.y - half},
+            math::Vec2{WORLD_SIZE.x, BORDER_THICKNESS},
+            BORDER_COLOR
+        );
+    }
 }
 
 int main()
@@ -240,6 +256,8 @@ int main()
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
     float accumulator = 0.0f;
     game::Input input;
+
+    float shake = 0.0f;
 
     AppMode mode = AppMode::Playing;
 
@@ -273,6 +291,9 @@ int main()
             {
                 canvas = game::editor_canvas(world.level);
                 status.clear();
+
+                // No steps run in the editor, so nothing would ever decay it.
+                shake = 0.0f;
             }
 
             mode = (mode == AppMode::Playing) ? AppMode::Editing : AppMode::Playing;
@@ -336,6 +357,9 @@ int main()
             {
                 game::step(world, input, game::FIXED_DT);
 
+                // Shake decays over time
+                shake = std::max(0.0f, shake - SHAKE_DECAY * game::FIXED_DT);
+
                 // Consumed. Held state is refreshed next frame regardless.
                 input.clear_one_shots();
 
@@ -355,11 +379,17 @@ int main()
                         ? platform::Sound::BrickHit
                         : platform::Sound::PaddleBounce
                     );
+
+                if (event == game::GameEvent::BrickHit)
+                {
+                    shake = SHAKE_MAGNITUDE;
+                }
             }
 
             world.events.clear();
         }
 
+        renderer.set_shake(shake_offset(shake));
         renderer.begin_frame();
         renderer.clear(core::Color{0.10f, 0.12f, 0.15f});
 
