@@ -75,6 +75,9 @@ namespace
     constexpr float SHAKE_MAGNITUDE = 4.0f;
     constexpr float SHAKE_DECAY = 22.0f;
 
+    // Steps skipped after a hit, so the ball hangs for a moment before it leaves.
+    constexpr int HIT_STOP_STEPS = 3;
+
     // Held state is overwritten each frame. One-shot actions are OR-ed in and
     // survive until a step consumes them.
     void read_input(const platform::Window& window, game::Input& input)
@@ -262,6 +265,7 @@ int main()
     game::Input input;
 
     float shake = 0.0f;
+    int freeze_steps = 0;
 
     AppMode mode = AppMode::Playing;
 
@@ -362,6 +366,14 @@ int main()
 
             while (accumulator >= game::FIXED_DT)
             {
+                accumulator -= game::FIXED_DT;
+
+                if (freeze_steps > 0)
+                {
+                    --freeze_steps;
+                    continue;
+                }
+
                 game::step(world, input, game::FIXED_DT);
 
                 // Shake decays over time
@@ -369,8 +381,6 @@ int main()
 
                 // Consumed. Held state is refreshed next frame regardless.
                 input.clear_one_shots();
-
-                accumulator -= game::FIXED_DT;
             }
 
             for (const game::GameEvent event : world.events)
@@ -384,6 +394,7 @@ int main()
                 if (event == game::GameEvent::BrickHit)
                 {
                     shake = SHAKE_MAGNITUDE;
+                    freeze_steps = HIT_STOP_STEPS;
                 }
             }
 
@@ -401,7 +412,9 @@ int main()
         }
         else
         {
-            render_world(world, renderer, accumulator / game::FIXED_DT);
+            // Nothing to interpolate towards while frozen.
+            const float step_fraction = (freeze_steps > 0) ? 1.0f : accumulator / game::FIXED_DT;
+            render_world(world, renderer, step_fraction);
             render_hud(world, renderer);
         }
 
