@@ -13,6 +13,13 @@ kind of thing.
 
 **A prebuilt Windows build is on the releases page.**
 
+| Playing | The same level, in the editor |
+|---|---|
+| ![The game running](docs/play.png) | ![The level editor](docs/editor.png) |
+
+The editor writes the format the game already read, so there is no import step
+and no second representation of a level.
+
 ## Building
 
 Requires Visual Studio 2022 and CMake 3.21 or newer. The first configure
@@ -74,8 +81,8 @@ rather than by convention:
                  /                 \
         platform                    game
         Window, Renderer,           World, Systems, Level,
-        Viewport, Font,             Spawn, Editor, LevelLayout
-        FileSystem
+        Viewport, Font,             Spawn, Editor, LevelLayout,
+        FileSystem, Audio           Input, Events
                  \                 /
                        core
                        Entity, ComponentStore, Color
