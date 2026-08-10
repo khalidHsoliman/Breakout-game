@@ -4,8 +4,8 @@
 
 A Breakout clone in C++, written from scratch over seven days. No engine, no
 gameplay framework, and no maths library: the only dependencies are GLFW for the
-window, glad for the OpenGL loader and miniaudio for sound, all three vendored
-as source, plus GoogleTest fetched at configure time.
+window, glad for the OpenGL loader, miniaudio for sound and GoogleTest for the
+tests - all four vendored as source, so it builds with no network access.
 
 It ships with an in-game level editor. Levels are plain text, so one built with
 the mouse, one typed in Notepad and the one built into the game are the same
@@ -22,9 +22,9 @@ and no second representation of a level.
 
 ## Building
 
-Requires Visual Studio 2022 and CMake 3.21 or newer. The first configure
-downloads GoogleTest, so it needs a network connection; everything else is in
-the repository.
+Requires Visual Studio 2022 and CMake 3.21 or newer. Nothing is downloaded:
+GLFW, glad, miniaudio and GoogleTest are all in `vendor/`, so this builds with
+no network access.
 
 ```
 git clone https://github.com/khalidHsoliman/Breakout-game.git
@@ -35,8 +35,8 @@ cmake --build build --config Release
 
 The executable lands in `build/bin/Release/breakout.exe`.
 
-To build without the test target - which also skips the GoogleTest download, so
-it works offline - use the `vs2022-x64-notests` preset instead.
+To build the game without the test target, use the `vs2022-x64-notests` preset
+instead.
 
 ## Running the tests
 
@@ -140,6 +140,8 @@ Claude was used on this project for the following:
   and buffer setup, and the batched draw in `platform/Renderer`
 - [Handmade Hero](https://handmadehero.org), day 277 - the sparse set entity
   storage in `core/ComponentStore`
+- [Interpolation Tricks](https://solhsa.com/interpolation/), Jari Komppa - the
+  smoothstep curve in `math/Lerp.h`, used to fade particles
 - [Microsoft Learn](https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew) -
   `GetModuleFileNameW`, and the truncation behaviour the growing buffer in
   `platform/FileSystem` exists to handle
