@@ -126,7 +126,7 @@ namespace game
         Level level;
         level.rows = static_cast<int>(last - first);
 
-        for (std::size_t i = first; i < last; ++i)
+        for (std::size_t i = first; i < last; i++)
         {
             level.columns = (std::max)(level.columns, static_cast<int>(lines[i].size()));
         }
@@ -143,7 +143,7 @@ namespace game
             0
         );
 
-        for (std::size_t i = first; i < last; ++i)
+        for (std::size_t i = first; i < last; i++)
         {
             const std::string_view line = lines[i];
             const std::size_t row = i - first;

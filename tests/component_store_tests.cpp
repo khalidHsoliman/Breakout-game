@@ -110,7 +110,7 @@ TEST(ComponentStore, DenseArraysStayParallelAfterRemoval)
     ASSERT_EQ(store.entities().size(), store.size());
     ASSERT_EQ(store.components().size(), store.size());
 
-    for (std::size_t i = 0; i < store.size(); ++i)
+    for (std::size_t i = 0; i < store.size(); i++)
     {
         const core::Entity entity = store.entities()[i];
         ASSERT_NE(store.find(entity), nullptr);

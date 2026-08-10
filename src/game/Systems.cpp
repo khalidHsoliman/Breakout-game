@@ -12,12 +12,14 @@ namespace game
     namespace
     {
         // Pushed a fraction further than the overlap, so floating point cannot
-        // leave the ball a hair inside and re-trigger the same contact.
+        // leave the ball inside and re-trigger the same contact.
         constexpr float PUSH_OUT_TOLERANCE = 0.01f;
 
         constexpr float MAX_BOUNCE_ANGLE = std::numbers::pi_v<float> / 3.0f;
 
         constexpr int POINTS_PER_HIT = 10;
+
+        constexpr float PARTICLE_GRAVITY = 420.0f;
 
         // Gap between the paddle's top and a held ball, so they do not collide
         // the instant it launches.
@@ -57,7 +59,7 @@ namespace game
             const math::Circle ball{transform.position, radius};
             const std::vector<core::Entity>& entities = world.paddles.entities();
 
-            for (std::size_t i = 0; i < world.paddles.size(); ++i)
+            for (std::size_t i = 0; i < world.paddles.size(); i++)
             {
                 const Transform* paddle = world.transforms.find(entities[i]);
                 if (paddle == nullptr)
@@ -98,6 +100,16 @@ namespace game
             velocity.value = math::normalize(velocity.value) * faster;
         }
 
+        void clear_particles(World& world)
+        {
+            const std::vector<core::Entity>& entities = world.particles.entities();
+
+            for (std::size_t i = 0; i < world.particles.size(); i++)
+            {
+                world.destroyed.add(entities[i], Destroyed{});
+            }
+        }
+
         void bounce_off_bricks(World& world, Transform& transform, Velocity& velocity, float radius)
         {
             const math::Circle ball{transform.position, radius};
@@ -108,7 +120,7 @@ namespace game
             core::Entity hit_entity = core::NULL_ENTITY;
             math::Contact deepest;
 
-            for (std::size_t i = 0; i < world.bricks.size(); ++i)
+            for (std::size_t i = 0; i < world.bricks.size(); i++)
             {
                 const core::Entity entity = entities[i];
                 if (!is_alive(world, entity))
@@ -141,6 +153,7 @@ namespace game
             Brick* brick = world.bricks.find(hit_entity);
             if (brick != nullptr)
             {
+                const int brick_hit_points = brick->hit_points;
                 brick->hit_points -= 1;
 
                 world.events.push_back(GameEvent::BrickHit);
@@ -154,6 +167,11 @@ namespace game
 
                 if (brick->hit_points <= 0)
                 {
+                    if (const Transform* dead = world.transforms.find(hit_entity); dead != nullptr)
+                    {
+                        spawn_brick_particles(world, dead->position, dead->size, brick_color(brick_hit_points));
+                    }
+
                     world.destroyed.add(hit_entity, Destroyed{});
                 }
                 else if (core::Color* color = world.colors.find(hit_entity); color != nullptr)
@@ -181,7 +199,7 @@ namespace game
         const std::vector<core::Entity>& entities = world.paddles.entities();
         const std::vector<Paddle>& paddles = world.paddles.components();
 
-        for (std::size_t i = 0; i < paddles.size(); ++i)
+        for (std::size_t i = 0; i < paddles.size(); i++)
         {
             Transform* transform = world.transforms.find(entities[i]);
             if (transform == nullptr)
@@ -202,7 +220,7 @@ namespace game
         const std::vector<core::Entity>& entities = world.velocities.entities();
         const std::vector<Velocity>& velocities = world.velocities.components();
 
-        for (std::size_t i = 0; i < velocities.size(); ++i)
+        for (std::size_t i = 0; i < velocities.size(); i++)
         {
             Transform* transform = world.transforms.find(entities[i]);
             if (transform == nullptr)
@@ -219,7 +237,7 @@ namespace game
         const std::vector<core::Entity>& entities = world.balls.entities();
         const std::vector<Ball>& balls = world.balls.components();
 
-        for (std::size_t i = 0; i < balls.size(); ++i)
+        for (std::size_t i = 0; i < balls.size(); i++)
         {
             const core::Entity entity = entities[i];
 
@@ -243,7 +261,7 @@ namespace game
         const std::vector<core::Entity>& entities = world.balls.entities();
         const std::vector<Ball>& balls = world.balls.components();
 
-        for (std::size_t i = 0; i < balls.size(); ++i)
+        for (std::size_t i = 0; i < balls.size(); i++)
         {
             const core::Entity entity = entities[i];
 
@@ -266,7 +284,31 @@ namespace game
                 velocity->value = math::Vec2{};
             }
 
+            clear_particles(world);
             world.state = (world.lives <= 0) ? GameState::GameOver : GameState::Ready;
+        }
+    }
+
+    void particle_system(World& world, float dt)
+    {
+        const std::vector<core::Entity>& entities = world.particles.entities();
+
+        for (std::size_t i = 0; i < world.particles.size(); i++)
+        {
+            const core::Entity entity = entities[i];
+            Particle& particle = *world.particles.find(entity);
+
+            particle.lifetime -= dt;
+
+            if (particle.lifetime <= 0.0f)
+            {
+                world.destroyed.add(entity, Destroyed{});
+                continue;
+            }
+
+            // What is left of its life is what is left of its opacity.
+            world.colors.find(entity)->a = particle.lifetime / particle.max_life;
+            world.velocities.find(entity)->value.y -= PARTICLE_GRAVITY * dt;
         }
     }
 
@@ -274,6 +316,7 @@ namespace game
     {
         if (world.bricks.size() == 0)
         {
+            clear_particles(world);
             world.state = GameState::Won;
         }
     }
@@ -291,7 +334,7 @@ namespace game
 
         if (paddle != nullptr)
         {
-            for (std::size_t i = 0; i < balls.size(); ++i)
+            for (std::size_t i = 0; i < balls.size(); i++)
             {
                 Transform* transform = world.transforms.find(entities[i]);
                 if (transform == nullptr)
@@ -311,7 +354,7 @@ namespace game
             return;
         }
 
-        for (std::size_t i = 0; i < balls.size(); ++i)
+        for (std::size_t i = 0; i < balls.size(); i++)
         {
             launch_ball(world, entities[i]);
         }
@@ -368,6 +411,7 @@ namespace game
             paddle_system(world, input, dt);
             movement_system(world, dt);
             collision_system(world);
+            particle_system(world, dt);
             lifecycle_system(world);
             win_system(world);
             sweep_destroyed(world);

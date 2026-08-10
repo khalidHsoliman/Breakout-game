@@ -147,7 +147,7 @@ namespace
         const std::vector<core::Entity>& entities = world.transforms.entities();
         const std::vector<game::Transform>& transforms = world.transforms.components();
 
-        for (std::size_t i = 0; i < transforms.size(); ++i)
+        for (std::size_t i = 0; i < transforms.size(); i++)
         {
             const core::Entity entity = entities[i];
             const core::Color* color = world.colors.find(entity);

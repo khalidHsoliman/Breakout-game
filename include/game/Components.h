@@ -36,6 +36,12 @@ namespace game
         int hit_points = 1;
     };
 
+    struct Particle
+    {
+        float lifetime = 0.0f;
+        float max_life = 1.0f;
+    };
+
     // Tag: marked for removal at the end of the step. Systems must skip these,
     // or a dead brick still collides for the rest of the frame.
     struct Destroyed {};

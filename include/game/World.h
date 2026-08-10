@@ -55,6 +55,7 @@ namespace game
         core::ComponentStore<Ball> balls;
         core::ComponentStore<Paddle> paddles;
         core::ComponentStore<Brick> bricks;
+        core::ComponentStore<Particle> particles;
         core::ComponentStore<Destroyed> destroyed;
 
     private:

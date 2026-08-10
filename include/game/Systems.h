@@ -23,6 +23,7 @@ namespace game
     void movement_system(World& world, float dt);
     void collision_system(World& world);
     void lifecycle_system(World& world);
+    void particle_system(World& world, float dt);
     void win_system(World& world);
     void sweep_destroyed(World& world);
 

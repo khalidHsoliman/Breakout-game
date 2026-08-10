@@ -20,11 +20,11 @@ namespace platform
 #version 330 core
 
 layout (location = 0) in vec2 a_position;
-layout (location = 1) in vec3 a_color;
+layout (location = 1) in vec4 a_color;
 
 uniform vec2 u_world_size;
 
-out vec3 v_color;
+out vec4 v_color;
 
 void main()
 {
@@ -37,13 +37,13 @@ void main()
         const char* fragment_shader_source = R"(
 #version 330 core
 
-in vec3 v_color;
+in vec4 v_color;
 
 out vec4 frag_color;
 
 void main()
 {
-    frag_color = vec4(v_color, 1.0);
+    frag_color = v_color;
 }
 )";
 
@@ -116,6 +116,10 @@ void main()
 
         glEnable(GL_MULTISAMPLE);
 
+        // Everything the game draws is opaque except the fading particles.
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
         m_world_size = world_size;
         set_viewport(framebuffer_size);
 
@@ -137,7 +141,7 @@ void main()
         glEnableVertexAttribArray(0);
 
         glVertexAttribPointer(
-            1, 3, GL_FLOAT, GL_FALSE,
+            1, 4, GL_FLOAT, GL_FALSE,
             sizeof(Vertex),
             reinterpret_cast<const void*>(offsetof(Vertex, r))
         );
@@ -214,10 +218,10 @@ void main()
         const float bottom = center.y - half.y;
         const float top = center.y + half.y;
 
-        const Vertex bottom_left{left, bottom, color.r, color.g, color.b};
-        const Vertex bottom_right{right, bottom, color.r, color.g, color.b};
-        const Vertex top_right{right, top, color.r, color.g, color.b};
-        const Vertex top_left{left, top, color.r, color.g, color.b};
+        const Vertex bottom_left{left, bottom, color.r, color.g, color.b, color.a};
+        const Vertex bottom_right{right, bottom, color.r, color.g, color.b, color.a};
+        const Vertex top_right{right, top, color.r, color.g, color.b, color.a};
+        const Vertex top_left{left, top, color.r, color.g, color.b, color.a};
 
         m_vertices.push_back(bottom_left);
         m_vertices.push_back(bottom_right);
@@ -235,10 +239,10 @@ void main()
             segments = 3;
         }
 
-        const Vertex middle{center.x, center.y, color.r, color.g, color.b};
+        const Vertex middle{center.x, center.y, color.r, color.g, color.b, color.a};
         const float step = 2.0f * std::numbers::pi_v<float> / static_cast<float>(segments);
 
-        for (int i = 0; i < segments; ++i)
+        for (int i = 0; i < segments; i++)
         {
             const float from = step * static_cast<float>(i);
             const float to = step * static_cast<float>(i + 1);
@@ -248,12 +252,12 @@ void main()
             m_vertices.push_back(Vertex{
                 center.x + std::cos(from) * radius,
                 center.y + std::sin(from) * radius,
-                color.r, color.g, color.b
+                color.r, color.g, color.b, color.a
             });
             m_vertices.push_back(Vertex{
                 center.x + std::cos(to) * radius,
                 center.y + std::sin(to) * radius,
-                color.r, color.g, color.b
+                color.r, color.g, color.b, color.a
             });
         }
     }

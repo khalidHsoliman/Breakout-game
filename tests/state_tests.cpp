@@ -48,7 +48,7 @@ TEST(StateMachine, TheHeldBallFollowsThePaddle)
 
     game::Input input;
     input.move_right = true;
-    for (int i = 0; i < 30; ++i)
+    for (int i = 0; i < 30; i++)
     {
         game::step(world, input, DT);
     }
@@ -82,7 +82,7 @@ TEST(StateMachine, NothingMovesWhilePaused)
     game::step(world, pause_input(), DT);
     ASSERT_EQ(world.state, game::GameState::Paused);
 
-    for (int i = 0; i < 60; ++i)
+    for (int i = 0; i < 60; i++)
     {
         game::step(world, game::Input{}, DT);
     }
@@ -138,7 +138,7 @@ TEST(StateMachine, ClearingTheLastBrickWins)
     game::World world = started_world();
     game::step(world, launch_input(), DT);
 
-    for (int i = 0; i < 600 && world.state == game::GameState::Playing; ++i)
+    for (int i = 0; i < 600 && world.state == game::GameState::Playing; i++)
     {
         game::step(world, game::Input{}, DT);
     }

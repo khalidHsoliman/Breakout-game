@@ -86,7 +86,7 @@ TEST(PaddleSystem, StaysInsideThePlayArea)
 
     game::Input input;
     input.move_left = true;
-    for (int i = 0; i < 60; ++i)
+    for (int i = 0; i < 60; i++)
     {
         game::paddle_system(world, input, DT);
     }
@@ -212,7 +212,7 @@ TEST(Step, IsDeterministic)
 
         game::Input input;
         input.move_right = true;
-        for (int i = 0; i < steps; ++i)
+        for (int i = 0; i < steps; i++)
         {
             game::step(world, input, DT);
         }
@@ -234,7 +234,7 @@ TEST(Step, BallNeverEscapesThePlayArea)
     add_paddle(world, math::Vec2{400.0f, 40.0f});
     const core::Entity ball = add_ball(world, math::Vec2{400.0f, 300.0f}, math::Vec2{213.0f, -317.0f});
 
-    for (int i = 0; i < 600; ++i)
+    for (int i = 0; i < 600; i++)
     {
         game::step(world, game::Input{}, DT);
 
@@ -254,7 +254,7 @@ TEST(Step, BouncingOffWallsPreservesSpeed)
 
     const float initial_speed = math::length(world.velocities.find(ball)->value);
 
-    for (int i = 0; i < 120; ++i)
+    for (int i = 0; i < 120; i++)
     {
         game::step(world, game::Input{}, DT);
     }

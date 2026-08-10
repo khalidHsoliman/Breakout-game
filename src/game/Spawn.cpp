@@ -1,3 +1,7 @@
+#include <cmath>
+#include <cstdint>
+#include <numbers>
+
 #include "game/LevelLayout.h"
 #include "game/Spawn.h"
 
@@ -5,10 +9,25 @@ namespace game
 {
     namespace
     {
+        // Paddle
         constexpr float PADDLE_WIDTH = 120.0f;
         constexpr float PADDLE_HEIGHT = 20.0f;
         constexpr float PADDLE_Y = 40.0f;
         constexpr float PADDLE_SPEED = 520.0f;
+
+        // Particles
+        constexpr int PARTICLES_PER_BRICK = 10;
+        constexpr float PARTICLE_MIN_SIZE = 1.0f;
+        constexpr float PARTICLE_MAX_SIZE = 4.0f;
+        constexpr float PARTICLE_MIN_SPEED = 40.0f;
+        constexpr float PARTICLE_MAX_SPEED = 190.0f;
+        constexpr float PARTICLE_MIN_LIFE = 0.35f;
+        constexpr float PARTICLE_MAX_LIFE = 0.85f;
+
+        float random_range(float low, float high)
+        {
+            return low + (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * (high - low);
+        }
 
         constexpr float BALL_RADIUS = 8.0f;
         constexpr float BALL_SPEED = 350.0f;
@@ -68,6 +87,29 @@ namespace game
             math::Vec2{world.size.x * 0.5f, BALL_START_Y};
 
         return entity;
+    }
+
+    void spawn_brick_particles(World& world, math::Vec2 center, math::Vec2 size, core::Color color)
+    {
+        for (int i = 0; i < PARTICLES_PER_BRICK; i++)
+        {
+            const core::Entity entity = world.create_entity();
+
+            const math::Vec2 position{
+                center.x + random_range(-0.5f, 0.5f) * size.x,
+                center.y + random_range(-0.5f, 0.5f) * size.y
+            };
+
+            const float p_angle = random_range(0.0f, 2.0f * std::numbers::pi_v<float>);
+            const float p_size = random_range(PARTICLE_MIN_SIZE, PARTICLE_MAX_SIZE);
+            const float p_speed = random_range(PARTICLE_MIN_SPEED, PARTICLE_MAX_SPEED);
+            const float p_life = random_range(PARTICLE_MIN_LIFE, PARTICLE_MAX_LIFE);
+
+            world.transforms.add(entity, Transform{position, math::Vec2{p_size, p_size}});
+            world.velocities.add(entity, Velocity{math::Vec2{std::cos(p_angle), std::sin(p_angle)} * p_speed});
+            world.colors.add(entity, color);
+            world.particles.add(entity, Particle{p_life, p_life});
+        }
     }
 
     void launch_ball(World& world, core::Entity ball)
