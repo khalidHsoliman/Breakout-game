@@ -27,6 +27,6 @@ namespace game
     void launch_ball(World& world, core::Entity ball);
 
     // Destroys every entity, resets score, lives and state, and rebuilds from
-    // the level. Used both to start and to restart, so the two cannot diverge.
+    // the level. Used both to start and to restart.
     void start_game(World& world, const Level& level);
 }

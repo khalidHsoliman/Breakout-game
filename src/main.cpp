@@ -36,8 +36,6 @@ namespace
     constexpr int WINDOW_WIDTH = 800;
     constexpr int WINDOW_HEIGHT = 600;
 
-    // World units. Currently 1:1 with pixels at the default window size, but
-    // nothing in the game may rely on that.
     constexpr math::Vec2 WORLD_SIZE{800.0f, 600.0f};
 
     // A long stall must not queue up seconds of catch-up work: past this many

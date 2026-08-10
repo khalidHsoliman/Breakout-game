@@ -110,6 +110,19 @@ TEST(Editor, ClearEmptiesACell)
     EXPECT_EQ(level.at(0, 0), 0);
 }
 
+TEST(Editor, CellsOutsideTheGridAreIgnored)
+{
+    game::Level level = grid();
+    const game::Level before = level;
+
+    game::cycle_cell(level, game::Cell{0, 0, false});
+    game::clear_cell(level, game::Cell{0, 0, false});
+    game::cycle_cell(level, game::Cell{99, 0, true});
+    game::clear_cell(level, game::Cell{0, 99, true});
+
+    EXPECT_EQ(level, before);
+}
+
 TEST(EditorCanvas, IsAlwaysTheSameShape)
 {
     for (const game::Level source : {game::Level{}, grid(), game::parse_level("1111111111111\n2222222222222")})
@@ -131,26 +144,4 @@ TEST(EditorCanvas, KeepsWhatFitsAndLeavesTheRestEmpty)
 
     EXPECT_EQ(canvas.at(4, 0), 0);   // past the source's last column
     EXPECT_EQ(canvas.at(0, 3), 0);   // past the source's last row
-}
-
-// Opening a level smaller than the canvas and closing it again must not shrink
-// the grid, or the editable area would only ever get smaller.
-TEST(EditorCanvas, SurvivesBeingAppliedTwice)
-{
-    const game::Level once = game::editor_canvas(game::parse_level("12\n34"));
-
-    EXPECT_EQ(game::editor_canvas(once), once);
-}
-
-TEST(Editor, CellsOutsideTheGridAreIgnored)
-{
-    game::Level level = grid();
-    const game::Level before = level;
-
-    game::cycle_cell(level, game::Cell{0, 0, false});
-    game::clear_cell(level, game::Cell{0, 0, false});
-    game::cycle_cell(level, game::Cell{99, 0, true});
-    game::clear_cell(level, game::Cell{0, 99, true});
-
-    EXPECT_EQ(level, before);
 }

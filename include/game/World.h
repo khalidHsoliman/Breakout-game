@@ -36,8 +36,6 @@ namespace game
         // The play area, in world units. Nothing here is measured in pixels.
         math::Vec2 size;
 
-        // Singletons: exactly one of each, so plain members rather than a
-        // component store holding a single entry.
         int score = 0;
         int lives = STARTING_LIVES;
         GameState state = GameState::Ready;

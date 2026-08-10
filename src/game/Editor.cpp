@@ -18,8 +18,6 @@ namespace game
         {
             for (int column = 0; column < EDITOR_COLUMNS; ++column)
             {
-                // at returns 0 outside the source grid, so a smaller level
-                // needs no special case: the rest of the canvas stays empty.
                 canvas.set(column, row, source.at(column, row));
             }
         }
@@ -29,8 +27,6 @@ namespace game
 
     void cycle_cell(Level& level, Cell cell)
     {
-        // The one thing Level cannot check for itself: a Cell that missed the
-        // grid reports column 0, row 0, which is a perfectly writable place.
         if (!cell.inside)
         {
             return;

@@ -11,8 +11,7 @@ namespace platform
 {
     namespace
     {
-        // GLFW reports the reason for a failure here rather than in a return
-        // value, so without this a failed init tells you nothing useful.
+        // GLFW reports the reason for a failure here rather than in a return value
         void error_callback(int code, const char* description)
         {
             std::fprintf(stderr, "GLFW error %d: %s\n", code, description);
@@ -78,8 +77,7 @@ namespace platform
         // Fixed size: nothing updates the GL viewport on resize.
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-        // The quads are axis-aligned and alias-free, but the ball's edges are
-        // diagonal. Four samples per pixel is what smooths them.
+        // Anti-aliasing to smooth ball edges.
         glfwWindowHint(GLFW_SAMPLES, 4);
 
         GLFWmonitor* monitor = nullptr;
@@ -97,9 +95,6 @@ namespace platform
                 return false;
             }
 
-            // Requesting the monitor's current mode makes this borderless
-            // fullscreen: GLFW keeps the desktop resolution instead of
-            // switching video mode, so alt-tab is instant.
             glfwWindowHint(GLFW_RED_BITS, mode->redBits);
             glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
             glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
@@ -130,8 +125,7 @@ namespace platform
 
         glfwSwapInterval(1);
 
-        // Remember a windowed placement to restore when leaving fullscreen. If
-        // we started fullscreen there is nothing to remember, so centre it.
+        // Remember the windowed size and position, so it can be restored after leaving fullscreen.
         m_windowed_width = width;
         m_windowed_height = height;
 
@@ -146,8 +140,6 @@ namespace platform
         }
 
         m_fullscreen = fullscreen;
-
-        // Assigned last, so a non-null m_handle means fully initialised.
         m_handle = handle;
         return true;
     }
@@ -268,8 +260,7 @@ namespace platform
         glfwGetCursorPos(m_handle, &x, &y);
 
         // GLFW reports the cursor in window coordinates and the framebuffer in
-        // pixels. They differ under DPI scaling, so the cursor has to be scaled
-        // before it means anything to the viewport.
+        // pixels. They differ under DPI scaling, so the cursor has to be scaled.
         int window_width = 0;
         int window_height = 0;
         glfwGetWindowSize(m_handle, &window_width, &window_height);

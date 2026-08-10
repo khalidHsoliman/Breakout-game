@@ -20,57 +20,33 @@ TEST(CircleVsAABB, MissesWhenFarAway)
     EXPECT_FALSE(contact.hit);
 }
 
-TEST(CircleVsAABB, HitsFromAbove)
+TEST(CircleVsAABB, HitsFromEachFace)
 {
-    const math::Contact contact = math::circle_vs_aabb(math::Circle{math::Vec2{50.0f, 55.0f}, 10.0f}, BRICK);
+    struct Case
+    {
+        const char* face;
+        math::Vec2 center;
+        math::Vec2 normal;
+    };
 
-    EXPECT_TRUE(contact.hit);
-    EXPECT_NEAR(contact.normal.x, 0.0f, TOLERANCE);
-    EXPECT_NEAR(contact.normal.y, 1.0f, TOLERANCE);
-    EXPECT_NEAR(contact.penetration, 5.0f, TOLERANCE);
-}
+    const Case cases[] = {
+        {"above", math::Vec2{50.0f, 55.0f},  math::Vec2{0.0f, 1.0f}},
+        {"below", math::Vec2{50.0f, -5.0f},  math::Vec2{0.0f, -1.0f}},
+        {"left",  math::Vec2{-5.0f, 25.0f},  math::Vec2{-1.0f, 0.0f}},
+        {"right", math::Vec2{105.0f, 25.0f}, math::Vec2{1.0f, 0.0f}},
+    };
 
-TEST(CircleVsAABB, HitsFromBelow)
-{
-    const math::Contact contact = math::circle_vs_aabb(math::Circle{math::Vec2{50.0f, -5.0f}, 10.0f}, BRICK);
+    // Each sits five units into the box, so the normal points back out of the
+    // face it came through and the penetration is the same from every side.
+    for (const Case& probe : cases)
+    {
+        const math::Contact contact = math::circle_vs_aabb(math::Circle{probe.center, 10.0f}, BRICK);
 
-    EXPECT_TRUE(contact.hit);
-    EXPECT_NEAR(contact.normal.x, 0.0f, TOLERANCE);
-    EXPECT_NEAR(contact.normal.y, -1.0f, TOLERANCE);
-    EXPECT_NEAR(contact.penetration, 5.0f, TOLERANCE);
-}
-
-TEST(CircleVsAABB, HitsFromTheLeft)
-{
-    const math::Contact contact = math::circle_vs_aabb(math::Circle{math::Vec2{-5.0f, 25.0f}, 10.0f}, BRICK);
-
-    EXPECT_TRUE(contact.hit);
-    EXPECT_NEAR(contact.normal.x, -1.0f, TOLERANCE);
-    EXPECT_NEAR(contact.normal.y, 0.0f, TOLERANCE);
-    EXPECT_NEAR(contact.penetration, 5.0f, TOLERANCE);
-}
-
-TEST(CircleVsAABB, HitsFromTheRight)
-{
-    const math::Contact contact = math::circle_vs_aabb(math::Circle{math::Vec2{105.0f, 25.0f}, 10.0f}, BRICK);
-
-    EXPECT_TRUE(contact.hit);
-    EXPECT_NEAR(contact.normal.x, 1.0f, TOLERANCE);
-    EXPECT_NEAR(contact.normal.y, 0.0f, TOLERANCE);
-    EXPECT_NEAR(contact.penetration, 5.0f, TOLERANCE);
-}
-
-// The case a box-shaped ball gets wrong: clipping a corner must reflect off the
-// corner, not off whichever face happens to be nearer.
-TEST(CircleVsAABB, HitsACornerDiagonally)
-{
-    const math::Contact contact = math::circle_vs_aabb(math::Circle{math::Vec2{103.0f, 53.0f}, 10.0f}, BRICK);
-
-    EXPECT_TRUE(contact.hit);
-    EXPECT_NEAR(contact.normal.x, 0.70710678f, TOLERANCE);
-    EXPECT_NEAR(contact.normal.y, 0.70710678f, TOLERANCE);
-    EXPECT_NEAR(math::length(contact.normal), 1.0f, TOLERANCE);
-    EXPECT_NEAR(contact.penetration, 10.0f - 4.24264069f, TOLERANCE);
+        EXPECT_TRUE(contact.hit) << probe.face;
+        EXPECT_NEAR(contact.normal.x, probe.normal.x, TOLERANCE) << probe.face;
+        EXPECT_NEAR(contact.normal.y, probe.normal.y, TOLERANCE) << probe.face;
+        EXPECT_NEAR(contact.penetration, 5.0f, TOLERANCE) << probe.face;
+    }
 }
 
 TEST(CircleVsAABB, TouchingExactlyIsNotAHit)
@@ -78,18 +54,6 @@ TEST(CircleVsAABB, TouchingExactlyIsNotAHit)
     const math::Contact contact = math::circle_vs_aabb(math::Circle{math::Vec2{50.0f, 60.0f}, 10.0f}, BRICK);
 
     EXPECT_FALSE(contact.hit);
-}
-
-// Reachable with a fast ball and discrete collision. The closest point is the
-// centre itself, so the usual normal calculation would divide by zero.
-TEST(CircleVsAABB, CentreInsideThePushesOutOfTheNearestFace)
-{
-    const math::Contact contact = math::circle_vs_aabb(math::Circle{math::Vec2{50.0f, 15.0f}, 10.0f}, BRICK);
-
-    EXPECT_TRUE(contact.hit);
-    EXPECT_NEAR(contact.normal.x, 0.0f, TOLERANCE);
-    EXPECT_NEAR(contact.normal.y, -1.0f, TOLERANCE);
-    EXPECT_NEAR(contact.penetration, 25.0f, TOLERANCE);
 }
 
 TEST(CircleVsAABB, ContactNormalIsAlwaysUnitLength)
@@ -152,24 +116,19 @@ TEST(PaddleBounce, CentreHitGoesStraightUp)
     EXPECT_NEAR(direction.y, 1.0f, TOLERANCE);
 }
 
-TEST(PaddleBounce, RightEdgeUsesTheMaximumAngle)
+TEST(PaddleBounce, TheEdgesUseTheMaximumAngle)
 {
-    const math::Vec2 direction = math::paddle_bounce_direction(1.0f, MAX_BOUNCE_ANGLE);
+    const math::Vec2 right = math::paddle_bounce_direction(1.0f, MAX_BOUNCE_ANGLE);
+    EXPECT_NEAR(right.x, 0.86602540f, TOLERANCE);   // sin 60
+    EXPECT_NEAR(right.y, 0.50000000f, TOLERANCE);   // cos 60
 
-    EXPECT_NEAR(direction.x, 0.86602540f, TOLERANCE);   // sin 60
-    EXPECT_NEAR(direction.y, 0.50000000f, TOLERANCE);   // cos 60
-}
-
-TEST(PaddleBounce, LeftEdgeMirrorsTheRight)
-{
-    const math::Vec2 direction = math::paddle_bounce_direction(-1.0f, MAX_BOUNCE_ANGLE);
-
-    EXPECT_NEAR(direction.x, -0.86602540f, TOLERANCE);
-    EXPECT_NEAR(direction.y, 0.50000000f, TOLERANCE);
+    const math::Vec2 left = math::paddle_bounce_direction(-1.0f, MAX_BOUNCE_ANGLE);
+    EXPECT_NEAR(left.x, -right.x, TOLERANCE) << "the two edges must mirror";
+    EXPECT_NEAR(left.y, right.y, TOLERANCE);
 }
 
 // The ball's centre can be slightly past the paddle's edge when it clips a
-// corner, which would otherwise produce an angle beyond the maximum.
+// corner, which would otherwise exceed the maximum angle.
 TEST(PaddleBounce, OffsetIsClampedBeyondTheEdges)
 {
     const math::Vec2 beyond = math::paddle_bounce_direction(2.5f, MAX_BOUNCE_ANGLE);

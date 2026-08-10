@@ -76,8 +76,7 @@ namespace game
 
                 transform.position += contact.normal * (contact.penetration + PUSH_OUT_TOLERANCE);
 
-                // Where it hit decides where it leaves - the incoming direction
-                // is discarded, which is what gives the player control.
+                // Where it hit decides where it leaves - the incoming direction is discarded.
                 const float half_width = paddle->size.x * 0.5f;
                 const float offset = (transform.position.x - paddle->position.x) / half_width;
                 const float speed = math::length(velocity.value);
@@ -189,8 +188,7 @@ namespace game
                 }
                 else if (core::Color* color = world.colors.find(hit_entity); color != nullptr)
                 {
-                    // Re-colour to the remaining toughness, so a damaged brick
-                    // stops claiming to be as tough as it was.
+                    // Re-colour to the remaining toughness.
                     *color = brick_color(brick->hit_points);
                 }
             }

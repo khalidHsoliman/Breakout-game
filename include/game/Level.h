@@ -6,7 +6,6 @@
 
 namespace game
 {
-    // A grid of brick toughness: 0 is an empty cell, 1 to 9 are hit points.
     // Row 0 is the top row, as it reads in the text.
     struct Level
     {
@@ -21,7 +20,6 @@ namespace game
         bool operator==(const Level&) const = default;
     };
 
-    // '1' to '9' set hit points; every other character is an empty cell.
     // Tolerates CRLF, blank leading and trailing lines, and ragged rows.
     Level parse_level(std::string_view text);
 

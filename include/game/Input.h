@@ -2,8 +2,6 @@
 
 namespace game
 {
-    // What the player is asking for, with no idea which keys produced it.
-    // main fills this in from Window, so the game never sees a key code.
     struct Input
     {
         // Held, assigned every frame

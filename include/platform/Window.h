@@ -5,8 +5,6 @@
 
 #include "math/Vec2.h"
 
-// Opaque to everything outside Window.cpp - keeps GLFW out of this header, so
-// no layer above platform/ can acquire a dependency on it by accident.
 struct GLFWwindow;
 
 namespace platform
@@ -48,13 +46,9 @@ namespace platform
         // Creates the window and its OpenGL 3.3 context. Reports the reason to
         // stderr and returns false on failure. No other method may be called
         // until this has returned true.
-        //
-        // When fullscreen is true the window covers the primary monitor at its
-        // current video mode; width and height then apply to windowed mode.
         bool init(int width, int height, const char* title, bool fullscreen);
 
-        // Keeps the OpenGL context, so the renderer's objects stay valid. The
-        // framebuffer size changes, so the caller must reset the viewport.
+        // toggling fullscreen.
         void set_fullscreen(bool fullscreen);
         bool is_fullscreen() const;
 
@@ -70,8 +64,7 @@ namespace platform
         // Held this frame.
         bool is_key_down(Key key) const;
 
-        // Went down this frame - use for one-shot actions, since is_key_down
-        // stays true for as long as the key is held.
+        // Went down this frame - use for one-shot actions.
         bool is_key_pressed(Key key) const;
 
         // In framebuffer pixels from the top-left.

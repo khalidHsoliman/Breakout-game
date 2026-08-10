@@ -109,8 +109,7 @@ namespace game
     {
         const std::vector<std::string_view> lines = split_lines(text);
 
-        // Only the outer blank lines go, so a raw string literal can breathe.
-        // Blank rows in the middle are real: they are gaps in the layout.
+        // Trim leading and trailing blank lines.
         std::size_t first = 0;
         while (first < lines.size() && is_blank(lines[first]))
         {

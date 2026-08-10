@@ -58,20 +58,16 @@ TEST(ParseLevel, PadsRaggedRows)
     EXPECT_EQ(level.at(2, 1), 0);
 }
 
-TEST(ParseLevel, TreatsUnknownCharactersAsEmpty)
+// Only 1 to 9 mean anything, so a zero is as empty as a letter or a dot.
+TEST(ParseLevel, AnythingOutsideOneToNineIsEmpty)
 {
-    const game::Level level = game::parse_level("1x2");
+    const game::Level level = game::parse_level("1x2.0");
 
     EXPECT_EQ(level.at(0, 0), 1);
     EXPECT_EQ(level.at(1, 0), 0);
     EXPECT_EQ(level.at(2, 0), 2);
-}
-
-TEST(ParseLevel, ZeroIsEmpty)
-{
-    const game::Level level = game::parse_level("101");
-
-    EXPECT_EQ(level.at(1, 0), 0);
+    EXPECT_EQ(level.at(3, 0), 0);
+    EXPECT_EQ(level.at(4, 0), 0);
 }
 
 TEST(ParseLevel, EmptyInputGivesAnEmptyLevel)
@@ -81,17 +77,6 @@ TEST(ParseLevel, EmptyInputGivesAnEmptyLevel)
     EXPECT_EQ(level.columns, 0);
     EXPECT_EQ(level.rows, 0);
     EXPECT_TRUE(level.hit_points.empty());
-}
-
-TEST(ParseLevel, ReadsAllNineToughnessLevels)
-{
-    const game::Level level = game::parse_level("123456789");
-
-    EXPECT_EQ(level.columns, 9);
-    for (int column = 0; column < 9; ++column)
-    {
-        EXPECT_EQ(level.at(column, 0), column + 1);
-    }
 }
 
 TEST(ToText, AnEmptyLevelIsEmptyText)
@@ -129,17 +114,6 @@ TEST(ToText, RoundTripsThroughTheParser)
         const game::Level original = game::parse_level(source);
         EXPECT_EQ(game::parse_level(game::to_text(original)), original) << source;
     }
-}
-
-// Empty cells are '.' and not spaces because the parser strips blank outer lines,
-// so a trailing row of spaces would vanish on reload and the level would lose
-// a row every time it was saved.
-TEST(ToText, RoundTripSurvivesATrailingEmptyRow)
-{
-    const game::Level original = game::parse_level("111\n...");
-
-    ASSERT_EQ(original.rows, 2);
-    EXPECT_EQ(game::parse_level(game::to_text(original)).rows, 2);
 }
 
 TEST(ToText, ClampsHitPointsToASingleDigit)

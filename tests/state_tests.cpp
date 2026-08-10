@@ -41,7 +41,6 @@ TEST(StateMachine, StartsReady)
     EXPECT_EQ(world.state, game::GameState::Ready);
 }
 
-// Moving the paddle while held is how the player aims the shot.
 TEST(StateMachine, TheHeldBallFollowsThePaddle)
 {
     game::World world = started_world();
@@ -104,33 +103,27 @@ TEST(StateMachine, PauseTogglesBackToPlaying)
     EXPECT_EQ(world.state, game::GameState::Playing);
 }
 
-// The bug the input latch exists to prevent: one press must not toggle twice
-// just because the frame ran two steps.
-TEST(StateMachine, PauseAppliedTwiceInOneFrameWouldToggleTwice)
+// The bug the input latch exists to prevent, and the fix, in one place: a
+// frame that runs two steps must not toggle pause twice, which is why main
+// clears one-shot actions after the first step consumes them.
+TEST(StateMachine, OneShotActionsMustBeClearedBetweenSteps)
 {
-    game::World world = started_world();
-    game::step(world, launch_input(), DT);
+    game::World held_world = started_world();
+    game::step(held_world, launch_input(), DT);
 
     const game::Input held = pause_input();
-    game::step(world, held, DT);
-    game::step(world, held, DT);
+    game::step(held_world, held, DT);
+    game::step(held_world, held, DT);
+    EXPECT_EQ(held_world.state, game::GameState::Playing) << "toggled twice";
 
-    // Back where it started - which is why main clears one-shots after the
-    // first step that consumes them.
-    EXPECT_EQ(world.state, game::GameState::Playing);
-}
-
-TEST(StateMachine, ClearingOneShotsMakesTheSecondStepHarmless)
-{
-    game::World world = started_world();
-    game::step(world, launch_input(), DT);
+    game::World cleared_world = started_world();
+    game::step(cleared_world, launch_input(), DT);
 
     game::Input input = pause_input();
-    game::step(world, input, DT);
+    game::step(cleared_world, input, DT);
     input.clear_one_shots();
-    game::step(world, input, DT);
-
-    EXPECT_EQ(world.state, game::GameState::Paused);
+    game::step(cleared_world, input, DT);
+    EXPECT_EQ(cleared_world.state, game::GameState::Paused);
 }
 
 TEST(StateMachine, ClearingTheLastBrickWins)

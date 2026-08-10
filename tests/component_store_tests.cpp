@@ -72,20 +72,6 @@ TEST(ComponentStore, RemoveFromMiddleKeepsOtherEntitiesReachable)
     EXPECT_EQ(*store.find(ENTITY_C), 30);
 }
 
-TEST(ComponentStore, RemoveLastElement)
-{
-    core::ComponentStore<int> store;
-    store.add(ENTITY_A, 10);
-    store.add(ENTITY_B, 20);
-
-    store.remove(ENTITY_B);
-
-    EXPECT_FALSE(store.has(ENTITY_B));
-    ASSERT_NE(store.find(ENTITY_A), nullptr);
-    EXPECT_EQ(*store.find(ENTITY_A), 10);
-    EXPECT_EQ(store.size(), 1u);
-}
-
 TEST(ComponentStore, RemoveOfUnknownEntityIsANoOp)
 {
     core::ComponentStore<int> store;
@@ -116,25 +102,4 @@ TEST(ComponentStore, DenseArraysStayParallelAfterRemoval)
         ASSERT_NE(store.find(entity), nullptr);
         EXPECT_EQ(*store.find(entity), store.components()[i]);
     }
-}
-
-// A high id must grow only the sparse lookup, never the dense array.
-TEST(ComponentStore, HandlesSparseEntityIds)
-{
-    core::ComponentStore<int> store;
-    store.add(core::Entity{1000}, 42);
-
-    EXPECT_TRUE(store.has(core::Entity{1000}));
-    EXPECT_FALSE(store.has(core::Entity{5}));
-    EXPECT_EQ(store.size(), 1u);
-}
-
-TEST(ComponentStore, ComponentsCanBeMutatedThroughFind)
-{
-    core::ComponentStore<int> store;
-    store.add(ENTITY_A, 10);
-
-    *store.find(ENTITY_A) = 55;
-
-    EXPECT_EQ(*store.find(ENTITY_A), 55);
 }

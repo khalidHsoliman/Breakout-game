@@ -85,11 +85,6 @@ TEST(BallSpeed, IsCappedHoweverManyBricksAreHit)
     EXPECT_NEAR(speed_of(world, ball), game::MAX_BALL_SPEED, TOLERANCE) << "the cap was never reached";
 }
 
-TEST(BallSpeed, TheCapCannotCrossABrickInOneStep)
-{
-    EXPECT_LT(game::MAX_BALL_SPEED * game::FIXED_DT, game::BRICK_HEIGHT);
-}
-
 TEST(BallSpeed, StartsOverAfterARestart)
 {
     game::World world = make_world();

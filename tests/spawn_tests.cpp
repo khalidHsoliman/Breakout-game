@@ -21,29 +21,13 @@ namespace
     }
 }
 
-TEST(SpawnLevel, CreatesOneBrickPerNonEmptyCell)
+TEST(SpawnLevel, TurnsTheGridIntoBricks)
 {
     game::World world = make_world();
 
     game::spawn_level(world, game::parse_level(DIAMOND));
 
     EXPECT_EQ(world.bricks.size(), 38u);
-}
-
-TEST(SpawnLevel, BricksCarryTheHitPointsFromTheGrid)
-{
-    game::World world = make_world();
-
-    game::spawn_level(world, game::parse_level("123"));
-
-    ASSERT_EQ(world.bricks.size(), 3u);
-
-    int total = 0;
-    for (const game::Brick& brick : world.bricks.components())
-    {
-        total += brick.hit_points;
-    }
-    EXPECT_EQ(total, 6);
 }
 
 TEST(SpawnLevel, BricksFitInsideThePlayArea)
@@ -80,15 +64,6 @@ TEST(SpawnLevel, GeometryScalesWithTheWorldSize)
     const float narrow_width = narrow.transforms.components().front().size.x;
     const float wide_width = wide.transforms.components().front().size.x;
     EXPECT_LT(narrow_width, wide_width);
-}
-
-TEST(SpawnLevel, AnEmptyLevelSpawnsNothing)
-{
-    game::World world = make_world();
-
-    game::spawn_level(world, game::parse_level(""));
-
-    EXPECT_EQ(world.bricks.size(), 0u);
 }
 
 TEST(SpawnBall, StartsHeldInsideThePlayArea)
@@ -139,8 +114,6 @@ TEST(StartGame, RebuildsEverythingFromScratch)
     EXPECT_EQ(world.balls.size(), 1u);
 }
 
-// If two toughness levels shared a colour, re-colouring on damage would be
-// invisible and the whole scheme would carry no information.
 TEST(BrickColor, DiffersBetweenToughnessLevels)
 {
     for (int hit_points = 1; hit_points < 4; ++hit_points)

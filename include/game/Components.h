@@ -16,11 +16,6 @@ namespace game
         math::Vec2 previous_position;
     };
 
-    // Tag: draw this entity as a circle rather than a rectangle, using half of
-    // the transform's width as the radius. Named CircleShape rather than Circle
-    // so it does not read like the collision shape in math/.
-    struct CircleShape {};
-
     struct Velocity
     {
         math::Vec2 value;
@@ -47,7 +42,10 @@ namespace game
         float max_life = 1.0f;
     };
 
-    // Tag: marked for removal at the end of the step. Systems must skip these,
-    // or a dead brick still collides for the rest of the frame.
+    // Tag: draw this entity as a circle rather than a rectangle, using half of
+    // the transform's width as the radius.
+    struct CircleShape {};
+
+    // Tag: marked for removal at the end of the step.
     struct Destroyed {};
 }

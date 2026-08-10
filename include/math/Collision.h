@@ -31,7 +31,7 @@ namespace math
         // The centre is inside the box, so the closest point is the centre
         // itself and there is no direction to push along. Comparing against
         // zero exactly is safe here: clamp returned the centre unchanged, so
-        // the subtraction is exact rather than computed.
+        // the subtraction is exact rather.
         if (distance_squared == 0.0f)
         {
             const float to_left = circle.center.x - box.min.x;
@@ -76,9 +76,6 @@ namespace math
         return direction - normal * (2.0f * dot(direction, normal));
     }
 
-    // Where the ball hit the paddle decides where it leaves, ignoring the
-    // incoming direction entirely - that is what gives the player control.
-    //
     // offset is -1 at the paddle's left edge, 0 at its centre, +1 at its right.
     // The result is a unit vector and always points upward, so the ball can
     // never leave through the paddle.
