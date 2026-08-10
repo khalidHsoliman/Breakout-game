@@ -17,6 +17,9 @@ namespace game
         constexpr float PADDLE_SPEED = 520.0f;
 
         // Particles
+        constexpr float TRAIL_SIZE = 7.0f;
+        constexpr float TRAIL_LIFE = 0.15f;
+
         constexpr int PARTICLES_PER_BRICK = 10;
         constexpr float PARTICLE_MIN_SIZE = 1.0f;
         constexpr float PARTICLE_MAX_SIZE = 4.0f;
@@ -111,6 +114,18 @@ namespace game
             world.colors.add(entity, color);
             world.particles.add(entity, Particle{p_life, p_life});
         }
+    }
+
+    void spawn_ball_trail(World& world, math::Vec2 position, core::Color color)
+    {
+        const core::Entity entity = world.create_entity();
+
+        world.transforms.add(entity, Transform{position, math::Vec2{TRAIL_SIZE, TRAIL_SIZE}, position});
+        world.colors.add(entity, color);
+        world.particles.add(entity, Particle{TRAIL_LIFE, TRAIL_LIFE});
+
+        // Still gets one, particle_system updates it
+        world.velocities.add(entity, Velocity{});
     }
 
     void launch_ball(World& world, core::Entity ball)

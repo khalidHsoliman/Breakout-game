@@ -20,6 +20,9 @@ namespace game
     // particles thrown from a brick that just died, in the colour it was.
     void spawn_brick_particles(World& world, math::Vec2 center, math::Vec2 size, core::Color color);
 
+    // A dot dropped where the ball just was.
+    void spawn_ball_trail(World& world, math::Vec2 position, core::Color color);
+
     // Gives a held ball its starting velocity.
     void launch_ball(World& world, core::Entity ball);
 

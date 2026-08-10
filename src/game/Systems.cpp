@@ -301,6 +301,28 @@ namespace game
         }
     }
 
+    void trail_system(World& world)
+    {
+        const std::vector<core::Entity>& entities = world.balls.entities();
+
+        for (std::size_t i = 0; i < world.balls.size(); i++)
+        {
+            const core::Entity entity = entities[i];
+
+            const Transform* transform = world.transforms.find(entity);
+            const core::Color* color = world.colors.find(entity);
+            if (transform == nullptr || color == nullptr)
+            {
+                continue;
+            }
+
+            const math::Vec2 position = transform->position;
+            const core::Color trail_color = *color;
+
+            spawn_ball_trail(world, position, trail_color);
+        }
+    }
+
     void particle_system(World& world, float dt)
     {
         const std::vector<core::Entity>& entities = world.particles.entities();
@@ -425,6 +447,7 @@ namespace game
             paddle_system(world, input, dt);
             movement_system(world, dt);
             collision_system(world);
+            trail_system(world);
             particle_system(world, dt);
             lifecycle_system(world);
             win_system(world);
