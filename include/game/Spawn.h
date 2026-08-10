@@ -17,7 +17,7 @@ namespace game
     // size and the grid dimensions, so the same level fits any play area.
     void spawn_level(World& world, const Level& level);
 
-    // Debris thrown from a brick that just died, in the colour it was.
+    // particles thrown from a brick that just died, in the colour it was.
     void spawn_brick_particles(World& world, math::Vec2 center, math::Vec2 size, core::Color color);
 
     // Gives a held ball its starting velocity.

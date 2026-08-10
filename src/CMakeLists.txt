@@ -33,6 +33,7 @@ add_executable(breakout
     main.cpp)
 
 target_include_directories(breakout PRIVATE "${CMAKE_SOURCE_DIR}/include")
+target_compile_definitions(breakout PRIVATE $<$<CONFIG:Debug>:BREAKOUT_DEBUG>)
 target_link_libraries(breakout PRIVATE breakout_platform breakout_game breakout_options)
 
 set_target_properties(breakout PROPERTIES

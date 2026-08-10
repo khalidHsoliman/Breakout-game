@@ -23,7 +23,11 @@ namespace
     };
 
     // Starting mode only - F11 toggles at runtime.
+#ifdef BREAKOUT_DEBUG
+    constexpr bool START_FULLSCREEN = false;
+#else
     constexpr bool START_FULLSCREEN = true;
+#endif
 
     // Used for windowed mode, whether that is at startup or after a toggle.
     constexpr int WINDOW_WIDTH = 800;
