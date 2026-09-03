@@ -2,7 +2,7 @@
 
 ![build](https://github.com/khalidHsoliman/Breakout-game/actions/workflows/ci.yml/badge.svg)
 
-A Breakout clone in C++, written from scratch over seven days. No engine, no
+A Breakout clone in C++, written from scratch. No engine, no
 gameplay framework, and no maths library: the only dependencies are GLFW for the
 window, glad for the OpenGL loader, miniaudio for sound and GoogleTest for the
 tests - all four vendored as source, so it builds with no network access.
