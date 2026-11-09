@@ -1,6 +1,9 @@
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <numbers>
+#include <utility>
+#include <vector>
 
 #include "game/LevelLayout.h"
 #include "math/Lerp.h"
@@ -10,12 +13,6 @@ namespace game
 {
     namespace
     {
-        // Paddle
-        constexpr float PADDLE_WIDTH = 120.0f;
-        constexpr float PADDLE_HEIGHT = 20.0f;
-        constexpr float PADDLE_Y = 40.0f;
-        constexpr float PADDLE_SPEED = 520.0f;
-
         // Particles
         constexpr float TRAIL_SIZE = 7.0f;
         constexpr float TRAIL_LIFE = 0.15f;
@@ -32,11 +29,6 @@ namespace game
         {
             return math::lerp(low, high, static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX));
         }
-
-        constexpr float BALL_RADIUS = 8.0f;
-        constexpr float BALL_SPEED = 350.0f;
-        constexpr float BALL_START_Y = 120.0f;
-
     }
 
     // Colour carries information here rather than decoration: the player can
@@ -140,7 +132,23 @@ namespace game
         velocity->value = math::normalize(math::Vec2{0.45f, 1.0f}) * BALL_SPEED;
     }
 
+    void start_game(World& world, std::vector<Level> levels)
+    {
+        world.levels = std::move(levels);
+        world.level_index = 0;
+        world.score = 0;
+        world.lives = STARTING_LIVES;
+        world.events.clear();
+
+        start_level(world);
+    }
+
     void start_game(World& world, const Level& level)
+    {
+        start_game(world, std::vector<Level>{level});
+    }
+
+    void start_level(World& world)
     {
         // Copied first: destroy_entity mutates the store being read. Every
         // entity in this game has a Transform, so this reaches all of them.
@@ -150,11 +158,10 @@ namespace game
             world.destroy_entity(entity);
         }
 
-        world.level = level;
-        world.score = 0;
-        world.lives = STARTING_LIVES;
+        const bool in_range =
+            world.level_index >= 0 && world.level_index < static_cast<int>(world.levels.size());
+        world.level = in_range ? world.levels[static_cast<std::size_t>(world.level_index)] : Level{};
         world.state = GameState::Ready;
-        world.events.clear();
 
         spawn_paddle(world);
         spawn_ball(world);

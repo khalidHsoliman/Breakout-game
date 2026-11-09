@@ -19,7 +19,7 @@ namespace
     core::Entity add_ball(game::World& world, math::Vec2 position, math::Vec2 velocity, float radius = 8.0f)
     {
         const core::Entity entity = world.create_entity();
-        world.transforms.add(entity, game::Transform{position, math::Vec2{radius * 2.0f, radius * 2.0f}});
+        world.transforms.add(entity, game::Transform{position, math::Vec2{radius * 2.0f, radius * 2.0f}, {}});
         world.velocities.add(entity, game::Velocity{velocity});
         world.balls.add(entity, game::Ball{radius});
         return entity;
@@ -28,7 +28,7 @@ namespace
     core::Entity add_paddle(game::World& world, math::Vec2 position, float speed = 500.0f)
     {
         const core::Entity entity = world.create_entity();
-        world.transforms.add(entity, game::Transform{position, math::Vec2{120.0f, 20.0f}});
+        world.transforms.add(entity, game::Transform{position, math::Vec2{120.0f, 20.0f}, {}});
         world.paddles.add(entity, game::Paddle{speed});
         return entity;
     }
@@ -36,7 +36,7 @@ namespace
     core::Entity add_brick(game::World& world, math::Vec2 position, int hit_points = 1)
     {
         const core::Entity entity = world.create_entity();
-        world.transforms.add(entity, game::Transform{position, math::Vec2{90.0f, 30.0f}});
+        world.transforms.add(entity, game::Transform{position, math::Vec2{90.0f, 30.0f}, {}});
         world.bricks.add(entity, game::Brick{hit_points});
         return entity;
     }

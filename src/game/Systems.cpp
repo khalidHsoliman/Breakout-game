@@ -22,10 +22,6 @@ namespace game
 
         constexpr float PARTICLE_GRAVITY = 420.0f;
 
-        // Gap between the paddle's top and a held ball, so they do not collide
-        // the instant it launches.
-        constexpr float SERVE_GAP = 2.0f;
-
         math::AABB bounds_of(const Transform& transform)
         {
             const math::Vec2 half = transform.size * 0.5f;
@@ -347,11 +343,21 @@ namespace game
 
     void win_system(World& world)
     {
-        if (world.bricks.size() == 0)
+        if (world.bricks.size() != 0)
         {
-            clear_particles(world);
-            world.state = GameState::Won;
+            return;
         }
+
+        if (world.level_index + 1 < static_cast<int>(world.levels.size()))
+        {
+            // start_level clears the particles along with everything else.
+            world.level_index += 1;
+            start_level(world);
+            return;
+        }
+
+        clear_particles(world);
+        world.state = GameState::Won;
     }
 
     void serve_system(World& world, const Input& input)
@@ -398,7 +404,8 @@ namespace game
     {
         if (input.restart && (world.state == GameState::GameOver || world.state == GameState::Won))
         {
-            start_game(world, world.level);
+            // From the first level, not the one that was lost on.
+            start_game(world, world.levels);
             return;
         }
 

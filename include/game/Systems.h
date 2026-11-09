@@ -12,6 +12,10 @@ namespace game
     inline constexpr float FIXED_DT = 1.0f / 60.0f;
     inline constexpr float MAX_BALL_SPEED = 0.5f * BRICK_HEIGHT / FIXED_DT;
 
+    // Gap between the paddle's top and a held ball, so they do not collide
+    // the instant it launches.
+    inline constexpr float SERVE_GAP = 2.0f;
+
     // The ball cannot cross a brick in a single step.
     static_assert(
         MAX_BALL_SPEED * FIXED_DT < BRICK_HEIGHT,
@@ -25,7 +29,11 @@ namespace game
     void lifecycle_system(World& world);
     void trail_system(World& world);
     void particle_system(World& world, float dt);
+
+    // Clearing a level moves on to the next, keeping score and lives; clearing
+    // the last one wins.
     void win_system(World& world);
+
     void sweep_destroyed(World& world);
 
     // Pause, resume and restart. Runs in every state, since it is what gets

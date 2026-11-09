@@ -19,7 +19,7 @@ namespace
     core::Entity add_ball(game::World& world, math::Vec2 position, math::Vec2 velocity)
     {
         const core::Entity entity = world.create_entity();
-        world.transforms.add(entity, game::Transform{position, math::Vec2{16.0f, 16.0f}});
+        world.transforms.add(entity, game::Transform{position, math::Vec2{16.0f, 16.0f}, {}});
         world.velocities.add(entity, game::Velocity{velocity});
         world.balls.add(entity, game::Ball{8.0f});
         return entity;
@@ -28,7 +28,7 @@ namespace
     core::Entity add_brick(game::World& world, math::Vec2 position, int hit_points)
     {
         const core::Entity entity = world.create_entity();
-        world.transforms.add(entity, game::Transform{position, math::Vec2{60.0f, 24.0f}});
+        world.transforms.add(entity, game::Transform{position, math::Vec2{60.0f, 24.0f}, {}});
         world.colors.add(entity, game::brick_color(hit_points));
         world.bricks.add(entity, game::Brick{hit_points});
         return entity;
@@ -56,7 +56,7 @@ TEST(BallSpeed, ThePaddleDoesNotSpeedItUp)
     game::World world = make_world();
 
     const core::Entity paddle = world.create_entity();
-    world.transforms.add(paddle, game::Transform{math::Vec2{400.0f, 40.0f}, math::Vec2{120.0f, 20.0f}});
+    world.transforms.add(paddle, game::Transform{math::Vec2{400.0f, 40.0f}, math::Vec2{120.0f, 20.0f}, {}});
     world.paddles.add(paddle, game::Paddle{520.0f});
 
     const core::Entity ball = add_ball(world, math::Vec2{400.0f, 55.0f}, math::Vec2{0.0f, -200.0f});

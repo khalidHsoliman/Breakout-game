@@ -1,12 +1,15 @@
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "game/Editor.h"
+#include "game/LevelFiles.h"
 #include "game/LevelLayout.h"
 #include "game/Spawn.h"
 #include "game/Systems.h"
@@ -36,22 +39,11 @@ namespace
     constexpr int WINDOW_WIDTH = 800;
     constexpr int WINDOW_HEIGHT = 600;
 
-    constexpr math::Vec2 WORLD_SIZE{800.0f, 600.0f};
+    using game::WORLD_SIZE;
 
     // A long stall must not queue up seconds of catch-up work: past this many
     // steps the leftover time is dropped instead.
     constexpr int MAX_STEPS_PER_FRAME = 5;
-
-    // Digits are hit points; anything else is an empty cell.
-    constexpr const char* FIRST_LEVEL = R"(
-..111111..
-.12222221.
-1233333321
-.12222221.
-..111111..
-)";
-
-    constexpr const char* LEVEL_FILE_NAME = "custom-level.txt";
 
     constexpr float HUD_PIXEL = 3.0f;
     constexpr float HEADLINE_PIXEL = 6.0f;
@@ -149,6 +141,8 @@ namespace
         const float lives_x = WORLD_SIZE.x - 20.0f - platform::text_width(lives, HUD_PIXEL);
         renderer.draw_text(lives, math::Vec2{lives_x, 568.0f}, HUD_PIXEL, HUD_COLOR);
 
+        draw_centered(renderer, "LEVEL " + std::to_string(world.level_index + 1), 568.0f, HUD_PIXEL, HUD_COLOR);
+
         switch (world.state)
         {
         case game::GameState::Ready:
@@ -200,9 +194,10 @@ namespace
         }
     }
 
-    void render_editor_hud(platform::Renderer& renderer, std::string_view status, core::Color status_color)
+    void render_editor_hud(platform::Renderer& renderer, int slot, std::string_view status, core::Color status_color)
     {
         draw_centered(renderer, "LEVEL EDITOR", 560.0f, HUD_PIXEL, HUD_COLOR);
+        draw_centered(renderer, "SLOT " + std::to_string(slot) + "   LEFT RIGHT TO CHANGE", 180.0f, PROMPT_PIXEL, HUD_COLOR);
         draw_centered(renderer, "CLICK CYCLES A BRICK   RIGHT CLICK CLEARS", 150.0f, PROMPT_PIXEL, HUD_COLOR);
         draw_centered(renderer, "S SAVE   L LOAD   ENTER PLAY   E BACK", 120.0f, PROMPT_PIXEL, HUD_COLOR);
 
@@ -254,9 +249,20 @@ int main()
     audio.init(executable_directory / "assets");
     audio.start_music();
 
+    // Level files, which are also the editor's slots.
+    const std::filesystem::path levels_folder = executable_directory / "levels";
+
+    // Read once, at startup. Bad files are skipped, so the game always has
+    // something to play: the built-in level if nothing else.
+    game::LoadedLevels loaded = game::load_levels(levels_folder);
+    for (const std::string& error : loaded.errors)
+    {
+        std::fprintf(stderr, "%s\n", error.c_str());
+    }
+
     game::World world;
     world.size = WORLD_SIZE;
-    game::start_game(world, game::parse_level(FIRST_LEVEL));
+    game::start_game(world, std::move(loaded.levels));
 
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
     float accumulator = 0.0f;
@@ -271,10 +277,9 @@ int main()
     game::Level canvas;
     game::Cell cursor;
 
+    int slot = game::FIRST_SLOT;
     std::string status;
     core::Color status_color = HUD_COLOR;
-
-    const std::filesystem::path level_path = executable_directory / LEVEL_FILE_NAME;
 
     while (!window.should_close())
     {
@@ -329,30 +334,59 @@ int main()
                 status.clear();
             }
 
+            // The paddle keys pick the slot; nothing else uses them here.
+            if (window.is_key_pressed(platform::Key::MoveLeft))
+            {
+                slot = game::step_slot(slot, -1);
+                status.clear();
+            }
+
+            if (window.is_key_pressed(platform::Key::MoveRight))
+            {
+                slot = game::step_slot(slot, 1);
+                status.clear();
+            }
+
+            // The short version on screen, the whole story on stderr.
+            const auto show_result = [&](const game::SlotResult& result)
+            {
+                if (!result.error.empty())
+                {
+                    std::fprintf(stderr, "%s\n", result.error.c_str());
+                }
+
+                status = result.status;
+                status_color = result.ok ? GOOD_COLOR : BAD_COLOR;
+            };
+
             if (window.is_key_pressed(platform::Key::Save))
             {
-                const bool saved = platform::write_text_file(level_path, game::to_text(canvas));
-                status = saved ? "SAVED" : "COULD NOT SAVE";
-                status_color = saved ? GOOD_COLOR : BAD_COLOR;
+                show_result(game::save_slot(levels_folder, slot, canvas));
             }
 
             if (window.is_key_pressed(platform::Key::Load))
             {
-                std::string text;
-                const bool loaded = platform::read_text_file(level_path, text);
-                if (loaded)
+                game::SlotResult result = game::load_slot(levels_folder, slot);
+                if (result.ok)
                 {
-                    canvas = game::editor_canvas(game::parse_level(text));
+                    canvas = std::move(result.level);
                 }
-
-                status = loaded ? "LOADED" : "NOTHING SAVED YET";
-                status_color = loaded ? GOOD_COLOR : BAD_COLOR;
+                show_result(result);
             }
 
             if (window.is_key_pressed(platform::Key::Play))
             {
-                game::start_game(world, canvas);
-                mode = AppMode::Playing;
+                // An empty canvas would be won the moment it was launched.
+                if (game::has_bricks(canvas))
+                {
+                    game::start_game(world, canvas);
+                    mode = AppMode::Playing;
+                }
+                else
+                {
+                    status = "NOTHING TO PLAY";
+                    status_color = BAD_COLOR;
+                }
             }
 
             // No game time passes while editing
@@ -406,7 +440,7 @@ int main()
         if (mode == AppMode::Editing)
         {
             render_editor(canvas, cursor, renderer);
-            render_editor_hud(renderer, status, status_color);
+            render_editor_hud(renderer, slot, status, status_color);
         }
         else
         {

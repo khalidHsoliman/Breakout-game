@@ -22,9 +22,12 @@ and no second representation of a level.
 
 ## Building
 
-Requires Visual Studio 2022 and CMake 3.21 or newer. Nothing is downloaded:
-GLFW, glad, miniaudio and GoogleTest are all in `vendor/`, so this builds with
-no network access.
+Nothing is downloaded: GLFW, glad, miniaudio and GoogleTest are all in
+`vendor/`, so this builds with no network access.
+
+### Windows
+
+Requires Visual Studio 2022 and CMake 3.21 or newer.
 
 ```
 git clone https://github.com/khalidHsoliman/Breakout-game.git
@@ -38,14 +41,36 @@ The executable lands in `build/bin/Release/breakout.exe`.
 To build the game without the test target, use the `vs2022-x64-notests` preset
 instead.
 
+### Linux: game logic and tests only
+
+The window and sound layer is Windows only, so on Linux the option
+`BREAKOUT_BUILD_PLATFORM=OFF` leaves out `breakout_platform`, GLFW, glad,
+miniaudio and the `breakout` executable, and builds `breakout_game` and the
+tests. It is `ON` by default, so the Windows build and presets are unaffected.
+Requires a C and C++ compiler, make and CMake 3.21 or newer; on Ubuntu or
+Debian:
+
+```
+sudo apt-get install -y build-essential cmake
+git clone https://github.com/khalidHsoliman/Breakout-game.git
+cd Breakout-game
+cmake -S . -B build-linux -DBREAKOUT_BUILD_PLATFORM=OFF -DCMAKE_BUILD_TYPE=Debug
+cmake --build build-linux -j
+ctest --test-dir build-linux --output-on-failure
+```
+
+CMake from pip (`pip install cmake`) works too, but still needs `make`, or
+`pip install ninja` and `-G Ninja`.
+
 ## Running the tests
 
 ```
 ctest --test-dir build -C Debug
 ```
 
-114 tests, green in both Debug and Release. CI runs both configurations on every
-push.
+179 tests. CI runs them in Debug and Release on Windows for pushes and pull
+requests to `main`. On Linux with GCC 13 they pass in both configurations and
+build with no warnings.
 
 ## Controls
 
@@ -63,13 +88,96 @@ push.
 |---|---|
 | Left click | Cycle a cell: empty, 1, 2, 3, 4, empty |
 | Right click | Clear a cell |
-| S | Save to `custom-level.txt`, beside the executable |
-| L | Load it back |
+| Left / Right | Pick a slot, 1 to 9 |
+| S | Save the canvas to the slot |
+| L | Load the slot into the canvas |
 | Enter | Play the level on screen |
 | E | Back to the game, discarding unsaved edits |
 
 A brick's colour is its remaining toughness, so a level can be read at a glance
 and a damaged brick recolours as it is hit.
+
+## Levels
+
+### The levels folder
+
+Levels are read from a `levels` folder beside the executable (on Windows,
+`build/bin/Release/levels/`), once, when the game starts. The files are named
+`level-1.txt`, `level-2.txt`, `level-3.txt` and so on, and are played in that
+order: clearing a level moves on to the next one with the score and lives kept,
+clearing the last one is a win, and R after a win or a game over starts again
+from the first level with a score of 0.
+
+Reading stops at the first missing number, so with `level-1.txt` and
+`level-3.txt` only the first is played. When the folder is missing, empty, or
+holds no usable file, the game plays its built-in level. No `levels` folder
+ships with the game.
+
+The HUD shows LEVEL n, counting the levels that loaded. When a file is skipped,
+the ones after it move up: with `level-2.txt` bad, `level-3.txt` is LEVEL 2.
+
+### The file format
+
+One line per row of bricks, top row first. A digit from 1 to 9 is a brick that
+takes that many hits, and `.`, `0` or a space is an empty cell. Rows may be of
+different lengths; short rows are padded with empty cells, and trailing spaces
+count as columns. Blank lines above and below the grid are ignored. LF and CRLF
+line endings both work, and so does a UTF-8 byte order mark at the start, as
+Notepad may write.
+
+```
+..111111..
+.12222221.
+1233333321
+```
+
+### Bad files
+
+A file is bad, and skipped, when:
+
+- it holds any other character, a tab included
+- it is empty or only blank lines
+- it has no bricks
+- a brick is in row 18 or lower, counted from the first non-blank line, where it
+  would overlap the ball held on the paddle (rows of only empty cells below the
+  bricks are fine)
+- a row is more than 47 columns wide, where a brick would be narrower than the
+  distance the fastest ball moves in one step
+
+The 17 rows and 47 columns are not typed in anywhere: they are worked out from
+the game's own layout for its 800 by 600 play area.
+
+A bad file is skipped and the other files still load. Each skipped file is
+reported on stderr, which on Windows is the console window the game opens
+with, with the file name, line and column in front:
+
+```
+level-2.txt:3:5: 'x' is not allowed: a level may only contain digits, '.' and spaces
+level-3.txt: the file is empty
+```
+
+Lines count from the top of the file, blank lines included; columns count from
+1, and a byte order mark is not counted.
+
+### Slots in the editor
+
+The editor has nine slots, and they are the level files: slot n is
+`levels/level-n.txt`. Saving creates the `levels` folder if it is missing and
+overwrites the slot. A canvas with no bricks is not saved (NOTHING TO SAVE),
+and Enter on one does nothing but show NOTHING TO PLAY, since clearing nothing
+would be an instant win.
+
+Loading a slot uses the same checks as the game. A bad file shows BAD LEVEL FILE
+and its full error goes to stderr. A file bigger than the editor's 10 by 6 grid
+shows TOO BIG TO EDIT and is not loaded, so it is never cut down. A level
+narrower than 10 columns does load, but it is saved back 10 columns wide, and
+since brick width follows the number of columns, its bricks are narrower in
+the game after that.
+
+The folder is read only at startup, so a saved level joins the game the next
+time it starts. A test play with Enter replaces the loaded levels with the
+canvas, and R after it plays the canvas again; it stays that way until the game
+is started again.
 
 ## How it is put together
 
@@ -82,7 +190,8 @@ rather than by convention:
         platform                    game
         Window, Renderer,           World, Systems, Level,
         Viewport, Font,             Spawn, Editor, LevelLayout,
-        FileSystem, Audio           Input, Events
+        FileSystem, Audio           LevelCheck, LevelFiles,
+                                    Input, Events
                  \                 /
                        core
                        Entity, ComponentStore, Color
@@ -95,6 +204,8 @@ rather than by convention:
 cannot draw and the renderer cannot know what a brick is; `main.cpp` is the only
 place they meet. The include directory for glad is `PRIVATE` to the platform
 target, so a stray `#include <glad/gl.h>` in the game layer does not compile.
+The game layer does read and write level files, with `std::filesystem` only,
+so that code is tested too; `main.cpp` just passes it the folder.
 
 Entities are a strongly-typed id and components live in sparse sets - a dense
 array for iteration, a sparse index for lookup. Systems are free functions over

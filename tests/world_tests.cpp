@@ -23,7 +23,7 @@ TEST(World, DestroyEntityRemovesAllOfItsComponents)
 {
     game::World world;
     const core::Entity entity = world.create_entity();
-    world.transforms.add(entity, game::Transform{math::Vec2{1.0f, 2.0f}, math::Vec2{3.0f, 4.0f}});
+    world.transforms.add(entity, game::Transform{math::Vec2{1.0f, 2.0f}, math::Vec2{3.0f, 4.0f}, {}});
     world.colors.add(entity, core::Color{1.0f, 0.0f, 0.0f});
 
     world.destroy_entity(entity);
@@ -38,8 +38,8 @@ TEST(World, DestroyEntityLeavesOtherEntitiesIntact)
     const core::Entity doomed = world.create_entity();
     const core::Entity survivor = world.create_entity();
 
-    world.transforms.add(doomed, game::Transform{math::Vec2{1.0f, 1.0f}, math::Vec2{1.0f, 1.0f}});
-    world.transforms.add(survivor, game::Transform{math::Vec2{5.0f, 6.0f}, math::Vec2{7.0f, 8.0f}});
+    world.transforms.add(doomed, game::Transform{math::Vec2{1.0f, 1.0f}, math::Vec2{1.0f, 1.0f}, {}});
+    world.transforms.add(survivor, game::Transform{math::Vec2{5.0f, 6.0f}, math::Vec2{7.0f, 8.0f}, {}});
 
     world.destroy_entity(doomed);
 

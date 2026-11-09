@@ -125,7 +125,7 @@ TEST(Editor, CellsOutsideTheGridAreIgnored)
 
 TEST(EditorCanvas, IsAlwaysTheSameShape)
 {
-    for (const game::Level source : {game::Level{}, grid(), game::parse_level("1111111111111\n2222222222222")})
+    for (const game::Level& source : {game::Level{}, grid(), game::parse_level("1111111111111\n2222222222222")})
     {
         const game::Level canvas = game::editor_canvas(source);
 
@@ -144,4 +144,15 @@ TEST(EditorCanvas, KeepsWhatFitsAndLeavesTheRestEmpty)
 
     EXPECT_EQ(canvas.at(4, 0), 0);   // past the source's last column
     EXPECT_EQ(canvas.at(0, 3), 0);   // past the source's last row
+}
+
+TEST(Editor, HasBricksOnlyWhenACellIsNotEmpty)
+{
+    game::Level canvas = game::editor_canvas(game::Level{});
+    EXPECT_FALSE(game::has_bricks(canvas));
+
+    canvas.set(game::EDITOR_COLUMNS - 1, game::EDITOR_ROWS - 1, 1);
+    EXPECT_TRUE(game::has_bricks(canvas));
+
+    EXPECT_FALSE(game::has_bricks(game::Level{}));
 }

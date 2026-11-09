@@ -15,4 +15,8 @@ namespace game
     void cycle_cell(Level& level, Cell cell);
 
     void clear_cell(Level& level, Cell cell);
+
+    // A canvas without bricks is neither saved nor played: clearing nothing
+    // would be an instant win.
+    bool has_bricks(const Level& level);
 }

@@ -46,4 +46,16 @@ namespace game
 
         level.set(cell.column, cell.row, 0);
     }
+
+    bool has_bricks(const Level& level)
+    {
+        for (const int hit_points : level.hit_points)
+        {
+            if (hit_points > 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }

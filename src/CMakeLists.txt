@@ -11,12 +11,19 @@ add_library(breakout_game STATIC
     game/Level.cpp
     game/Spawn.cpp
     game/LevelLayout.cpp
+    game/LevelCheck.cpp
+    game/LevelFiles.cpp
     game/Editor.cpp)
 
 target_include_directories(breakout_game PUBLIC "${CMAKE_SOURCE_DIR}/include")
 target_link_libraries(breakout_game
     PUBLIC  breakout_core
     PRIVATE breakout_options)
+
+# Everything below this line is the window, sound and executable side.
+if(NOT BREAKOUT_BUILD_PLATFORM)
+    return()
+endif()
 
 add_library(breakout_platform STATIC
     platform/Window.cpp

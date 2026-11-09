@@ -20,6 +20,16 @@ namespace game
         bool operator==(const Level&) const = default;
     };
 
+    // The level played when there are no level files. Digits are hit points,
+    // '.' is an empty cell.
+    inline constexpr const char* BUILT_IN_LEVEL = R"(
+..111111..
+.12222221.
+1233333321
+.12222221.
+..111111..
+)";
+
     // Tolerates CRLF, blank leading and trailing lines, and ragged rows.
     Level parse_level(std::string_view text);
 

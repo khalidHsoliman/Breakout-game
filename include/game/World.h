@@ -15,13 +15,17 @@ namespace game
 {
     inline constexpr int STARTING_LIVES = 3;
 
+    // The play area, in world units. The window maps it onto the screen, and
+    // the level checks measure against it.
+    inline constexpr math::Vec2 WORLD_SIZE{800.0f, 600.0f};
+
     enum class GameState
     {
         Ready,      // ball held on the paddle, waiting to launch
         Playing,
         Paused,
         GameOver,   // out of lives
-        Won         // no bricks left
+        Won         // the last level cleared
     };
 
     // Owns the entities and every component store.
@@ -40,7 +44,12 @@ namespace game
         int lives = STARTING_LIVES;
         GameState state = GameState::Ready;
 
-        // Kept so a restart can rebuild without main handing it back
+        // Every level of the game in order, and which one is being played.
+        // Kept so a restart can rebuild without main handing them back.
+        std::vector<Level> levels;
+        int level_index = 0;
+
+        // The level being played: a copy of levels[level_index].
         Level level;
 
         // raised by systems during a step, consumed by main once per frame.

@@ -19,6 +19,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(BREAKOUT_BUILD_TESTS "Build the unit tests" ON)
+# OFF builds only the game logic and the tests: no window, no sound, none of
+# GLFW, glad or miniaudio, and no breakout executable.
+option(BREAKOUT_BUILD_PLATFORM "Build the platform layer and the breakout executable" ON)
 
 # Applied to our targets only, so vendored code keeps its own warning level.
 add_library(breakout_options INTERFACE)
@@ -30,7 +33,9 @@ else()
     target_compile_options(breakout_options INTERFACE -Wall -Wextra -Wpedantic)
 endif()
 
-add_subdirectory(vendor)
+if(BREAKOUT_BUILD_PLATFORM)
+    add_subdirectory(vendor)
+endif()
 add_subdirectory(src)
 
 if(BREAKOUT_BUILD_TESTS)

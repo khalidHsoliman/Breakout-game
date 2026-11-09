@@ -18,7 +18,10 @@ add_executable(breakout_tests
     viewport_tests.cpp
     state_tests.cpp
     events_tests.cpp
-    ball_speed_tests.cpp)
+    ball_speed_tests.cpp
+    progression_tests.cpp
+    level_check_tests.cpp
+    level_files_tests.cpp)
 
 target_link_libraries(breakout_tests PRIVATE
     GTest::gtest_main
