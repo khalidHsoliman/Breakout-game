@@ -17,6 +17,7 @@ namespace game
         paddles.remove(entity);
         bricks.remove(entity);
         particles.remove(entity);
+        capsules.remove(entity);
         destroyed.remove(entity);
     }
 }

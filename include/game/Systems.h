@@ -30,6 +30,11 @@ namespace game
     void trail_system(World& world);
     void particle_system(World& world, float dt);
 
+    // Runs down the wide paddle's time, gives a caught capsule's power-up to
+    // the paddle, and removes capsules that are caught or fall past the floor.
+    // Playing only, so the time stands still while paused.
+    void power_up_system(World& world, float dt);
+
     // Clearing a level moves on to the next, keeping score and lives; clearing
     // the last one wins.
     void win_system(World& world);

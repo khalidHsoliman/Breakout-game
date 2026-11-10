@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <random>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -68,6 +69,14 @@ namespace
     // Steps skipped after a hit, so the ball hangs for a moment before it leaves.
     constexpr int HIT_STOP_STEPS = 3;
 
+    // 7 font pixels of 1.5 fill three quarters of a 14 unit capsule.
+    constexpr float CAPSULE_LETTER_PIXEL = 1.5f;
+
+    // The background colour, so the letter reads as cut out of the capsule. A
+    // dark letter stands out on both the blue and the green; white would not
+    // on the green.
+    constexpr core::Color CAPSULE_LETTER_COLOR{0.10f, 0.12f, 0.15f};
+
     // Held state is overwritten each frame. One-shot actions are OR-ed in and
     // survive until a step consumes them.
     void read_input(const platform::Window& window, game::Input& input)
@@ -129,6 +138,45 @@ namespace
             {
                 renderer.draw_quad(position, transforms[i].size, *color);
             }
+        }
+    }
+
+    std::string_view capsule_letter(game::PowerUp kind)
+    {
+        switch (kind)
+        {
+        case game::PowerUp::WidePaddle:
+            return "W";
+        case game::PowerUp::MultiBall:
+            return "M";
+        }
+        return "";
+    }
+
+    // After render_world, so each letter is drawn over its capsule, and at the
+    // same in-between position, so it stays on it as it falls.
+    void render_capsule_letters(const game::World& world, platform::Renderer& renderer, float step_fraction)
+    {
+        const std::vector<core::Entity>& entities = world.capsules.entities();
+        const std::vector<game::Capsule>& capsules = world.capsules.components();
+
+        for (std::size_t i = 0; i < capsules.size(); i++)
+        {
+            const game::Transform* transform = world.transforms.find(entities[i]);
+            if (transform == nullptr)
+            {
+                continue;
+            }
+
+            const math::Vec2 center = math::lerp(transform->previous_position, transform->position, step_fraction);
+            const std::string_view letter = capsule_letter(capsules[i].kind);
+
+            // draw_text starts from the bottom left corner of the text.
+            const math::Vec2 corner{
+                center.x - platform::text_width(letter, CAPSULE_LETTER_PIXEL) * 0.5f,
+                center.y - platform::text_height(CAPSULE_LETTER_PIXEL) * 0.5f};
+
+            renderer.draw_text(letter, corner, CAPSULE_LETTER_PIXEL, CAPSULE_LETTER_COLOR);
         }
     }
 
@@ -262,6 +310,9 @@ int main()
 
     game::World world;
     world.size = WORLD_SIZE;
+
+    // Different drops every run. Seeded once: a restart keeps the generator.
+    world.rng.seed(std::random_device{}());
     game::start_game(world, std::move(loaded.levels));
 
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
@@ -447,6 +498,7 @@ int main()
             // Nothing to interpolate towards while frozen.
             const float step_fraction = (freeze_steps > 0) ? 1.0f : accumulator / game::FIXED_DT;
             render_world(world, renderer, step_fraction);
+            render_capsule_letters(world, renderer, step_fraction);
             render_hud(world, renderer);
         }
 

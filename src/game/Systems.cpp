@@ -1,6 +1,8 @@
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <numbers>
+#include <random>
 #include <vector>
 
 #include "game/Spawn.h"
@@ -106,6 +108,147 @@ namespace game
             }
         }
 
+        void clear_capsules(World& world)
+        {
+            const std::vector<core::Entity>& entities = world.capsules.entities();
+
+            for (std::size_t i = 0; i < world.capsules.size(); i++)
+            {
+                world.destroyed.add(entities[i], Destroyed{});
+            }
+        }
+
+        bool overlaps(const math::AABB& a, const math::AABB& b)
+        {
+            return a.min.x < b.max.x && b.min.x < a.max.x
+                && a.min.y < b.max.y && b.min.y < a.max.y;
+        }
+
+        // Used after the paddle moves and after it grows, since either can
+        // push it past a wall.
+        void keep_inside(const World& world, Transform& paddle)
+        {
+            const float half_width = paddle.size.x * 0.5f;
+            paddle.position.x = std::clamp(paddle.position.x, half_width, world.size.x - half_width);
+        }
+
+        // True with the given chance. Built on the engine's raw output, which
+        // the standard fixes, so a seed gives the same answers on every compiler.
+        bool roll(std::mt19937& rng, float chance)
+        {
+            const double outcomes = static_cast<double>(std::mt19937::max()) + 1.0;
+            return static_cast<double>(rng()) < static_cast<double>(chance) * outcomes;
+        }
+
+        void maybe_drop_capsule(World& world, math::Vec2 position)
+        {
+            if (!roll(world.rng, world.capsule_drop_chance))
+            {
+                return;
+            }
+
+            const PowerUp kind = roll(world.rng, 0.5f) ? PowerUp::WidePaddle : PowerUp::MultiBall;
+            spawn_capsule(world, position, kind);
+        }
+
+        void narrow_paddle(Transform& transform, Paddle& paddle)
+        {
+            // Shrinks about its centre, so it cannot end up past a wall.
+            transform.size.x = PADDLE_WIDTH;
+            paddle.wide_time_left = 0.0f;
+        }
+
+        void narrow_paddles(World& world)
+        {
+            const std::vector<core::Entity>& entities = world.paddles.entities();
+
+            for (std::size_t i = 0; i < world.paddles.size(); i++)
+            {
+                if (Transform* transform = world.transforms.find(entities[i]); transform != nullptr)
+                {
+                    narrow_paddle(*transform, *world.paddles.find(entities[i]));
+                }
+            }
+        }
+
+        // Past the floor: the whole ball is below it. lifecycle_system takes
+        // these out at the end of the step.
+        bool has_fallen(const Transform& transform, float radius)
+        {
+            return transform.position.y + radius < 0.0f;
+        }
+
+        bool in_play(const World& world, core::Entity ball)
+        {
+            const Transform* transform = world.transforms.find(ball);
+            return is_alive(world, ball) && transform != nullptr
+                && !has_fallen(*transform, world.balls.find(ball)->radius);
+        }
+
+        // Two more balls from the first ball still in play, up at
+        // MULTI_BALL_ANGLE either side of vertical at its speed, as many as fit
+        // under MAX_BALLS. Nothing without a ball in play.
+        void add_balls(World& world)
+        {
+            core::Entity source = core::NULL_ENTITY;
+            int balls_in_play = 0;
+
+            const std::vector<core::Entity>& entities = world.balls.entities();
+            for (std::size_t i = 0; i < world.balls.size(); i++)
+            {
+                if (!in_play(world, entities[i]))
+                {
+                    continue;
+                }
+
+                balls_in_play += 1;
+                if (source == core::NULL_ENTITY)
+                {
+                    source = entities[i];
+                }
+            }
+
+            if (source == core::NULL_ENTITY)
+            {
+                return;
+            }
+
+            // Copied: spawning adds transforms and velocities, which can move
+            // the stores these live in.
+            const Transform from = *world.transforms.find(source);
+            const float speed = math::length(world.velocities.find(source)->value);
+
+            for (const float side : {1.0f, -1.0f})
+            {
+                if (balls_in_play >= MAX_BALLS)
+                {
+                    return;
+                }
+
+                const core::Entity ball = spawn_ball(world);
+                Transform& transform = *world.transforms.find(ball);
+                transform.position = from.position;
+
+                // Drawn along the same path as the ball it came from, rather
+                // than sliding in from where spawn_ball put it.
+                transform.previous_position = from.previous_position;
+
+                const float angle = side * MULTI_BALL_ANGLE;
+                world.velocities.find(ball)->value = math::Vec2{std::sin(angle), std::cos(angle)} * speed;
+
+                balls_in_play += 1;
+            }
+        }
+
+        void widen_paddle(const World& world, Transform& transform, Paddle& paddle)
+        {
+            // Set rather than scaled, so another catch restarts the time
+            // without making it any wider.
+            transform.size.x = WIDE_PADDLE_WIDTH;
+            paddle.wide_time_left = WIDE_PADDLE_TIME;
+            keep_inside(world, transform);
+        }
+
         // Once per step, before anything moves.
         void remember_positions(World& world)
         {
@@ -177,7 +320,10 @@ namespace game
                 {
                     if (const Transform* dead = world.transforms.find(hit_entity); dead != nullptr)
                     {
-                        spawn_brick_particles(world, dead->position, dead->size, brick_color(brick_hit_points));
+                        // Copied: spawning adds transforms and can move the store.
+                        const math::Vec2 position = dead->position;
+                        spawn_brick_particles(world, position, dead->size, brick_color(brick_hit_points));
+                        maybe_drop_capsule(world, position);
                     }
 
                     world.destroyed.add(hit_entity, Destroyed{});
@@ -215,10 +361,7 @@ namespace game
             }
 
             transform->position.x += direction * paddles[i].speed * dt;
-
-            const float half_width = transform->size.x * 0.5f;
-            transform->position.x =
-                std::clamp(transform->position.x, half_width, world.size.x - half_width);
+            keep_inside(world, *transform);
         }
     }
 
@@ -268,32 +411,61 @@ namespace game
         const std::vector<core::Entity>& entities = world.balls.entities();
         const std::vector<Ball>& balls = world.balls.components();
 
+        std::vector<core::Entity> fallen;
+        bool any_in_play = false;
+
         for (std::size_t i = 0; i < balls.size(); i++)
         {
             const core::Entity entity = entities[i];
 
             const Transform* transform = world.transforms.find(entity);
-            if (transform == nullptr)
+            if (!is_alive(world, entity) || transform == nullptr)
             {
                 continue;
             }
 
-            if (transform->position.y + balls[i].radius >= 0.0f)
+            if (has_fallen(*transform, balls[i].radius))
             {
-                continue;
+                fallen.push_back(entity);
             }
-
-            world.lives -= 1;
-
-            Velocity* velocity = world.velocities.find(entity);
-            if (velocity != nullptr)
+            else
             {
-                velocity->value = math::Vec2{};
+                any_in_play = true;
             }
-
-            clear_particles(world);
-            world.state = (world.lives <= 0) ? GameState::GameOver : GameState::Ready;
         }
+
+        if (fallen.empty())
+        {
+            return;
+        }
+
+        // While another ball is in play, a fallen one is just gone. Otherwise
+        // one is kept to be served again and the rest go, so the next serve
+        // has exactly one ball.
+        const std::size_t first_to_remove = any_in_play ? 0 : 1;
+        for (std::size_t i = first_to_remove; i < fallen.size(); i++)
+        {
+            world.destroyed.add(fallen[i], Destroyed{});
+        }
+
+        if (any_in_play)
+        {
+            return;
+        }
+
+        // The last ball: one life, however many fell in this step.
+        world.lives -= 1;
+
+        Velocity* velocity = world.velocities.find(fallen[0]);
+        if (velocity != nullptr)
+        {
+            velocity->value = math::Vec2{};
+        }
+
+        clear_particles(world);
+        clear_capsules(world);
+        narrow_paddles(world);
+        world.state = (world.lives <= 0) ? GameState::GameOver : GameState::Ready;
     }
 
     void trail_system(World& world)
@@ -341,6 +513,76 @@ namespace game
         }
     }
 
+    void power_up_system(World& world, float dt)
+    {
+        const std::vector<core::Entity>& paddle_entities = world.paddles.entities();
+
+        // First, so a paddle widened in this step keeps its full time.
+        for (std::size_t i = 0; i < world.paddles.size(); i++)
+        {
+            Paddle& paddle = *world.paddles.find(paddle_entities[i]);
+            if (paddle.wide_time_left <= 0.0f)
+            {
+                continue;
+            }
+
+            paddle.wide_time_left -= dt;
+            if (paddle.wide_time_left > 0.0f)
+            {
+                continue;
+            }
+
+            paddle.wide_time_left = 0.0f;
+            if (Transform* transform = world.transforms.find(paddle_entities[i]); transform != nullptr)
+            {
+                narrow_paddle(*transform, paddle);
+            }
+        }
+
+        const std::vector<core::Entity>& capsule_entities = world.capsules.entities();
+
+        for (std::size_t i = 0; i < world.capsules.size(); i++)
+        {
+            const core::Entity entity = capsule_entities[i];
+            const Transform* transform = world.transforms.find(entity);
+            if (!is_alive(world, entity) || transform == nullptr)
+            {
+                continue;
+            }
+
+            const math::AABB capsule = bounds_of(*transform);
+
+            bool caught = false;
+            for (std::size_t p = 0; p < world.paddles.size() && !caught; p++)
+            {
+                Transform* paddle_transform = world.transforms.find(paddle_entities[p]);
+                if (paddle_transform == nullptr || !overlaps(capsule, bounds_of(*paddle_transform)))
+                {
+                    continue;
+                }
+
+                caught = true;
+
+                switch (world.capsules.find(entity)->kind)
+                {
+                case PowerUp::WidePaddle:
+                    widen_paddle(world, *paddle_transform, *world.paddles.find(paddle_entities[p]));
+                    break;
+                case PowerUp::MultiBall:
+                    // Adds transforms, so no pointer taken above is used after this.
+                    add_balls(world);
+                    break;
+                }
+            }
+
+            // Missed once all of it is below the floor.
+            if (caught || capsule.max.y < 0.0f)
+            {
+                world.destroyed.add(entity, Destroyed{});
+            }
+        }
+    }
+
     void win_system(World& world)
     {
         if (world.bricks.size() != 0)
@@ -357,6 +599,7 @@ namespace game
         }
 
         clear_particles(world);
+        clear_capsules(world);
         world.state = GameState::Won;
     }
 
@@ -453,6 +696,7 @@ namespace game
             paddle_system(world, input, dt);
             movement_system(world, dt);
             collision_system(world);
+            power_up_system(world, dt);
             trail_system(world);
             particle_system(world, dt);
             lifecycle_system(world);

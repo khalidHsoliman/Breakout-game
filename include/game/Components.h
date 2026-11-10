@@ -29,11 +29,27 @@ namespace game
     struct Paddle
     {
         float speed = 0.0f;
+
+        // Seconds of wide paddle left; 0 when it is its normal width.
+        float wide_time_left = 0.0f;
     };
 
     struct Brick
     {
         int hit_points = 1;
+    };
+
+    enum class PowerUp
+    {
+        WidePaddle,
+        MultiBall
+    };
+
+    // Dropped by a destroyed brick, falls straight down, and gives its power-up
+    // to the paddle that catches it.
+    struct Capsule
+    {
+        PowerUp kind = PowerUp::WidePaddle;
     };
 
     struct Particle

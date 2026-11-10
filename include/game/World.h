@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <random>
 #include <vector>
 
 #include "core/Color.h"
@@ -14,6 +15,13 @@
 namespace game
 {
     inline constexpr int STARTING_LIVES = 3;
+
+    // The chance that a destroyed brick drops a capsule.
+    inline constexpr float CAPSULE_DROP_CHANCE = 0.15f;
+
+    // The generator's seed until someone reseeds it: main does, from
+    // std::random_device, and the tests do with seeds of their own.
+    inline constexpr std::uint32_t DEFAULT_SEED = 5489u;
 
     // The play area, in world units. The window maps it onto the screen, and
     // the level checks measure against it.
@@ -55,6 +63,16 @@ namespace game
         // raised by systems during a step, consumed by main once per frame.
         std::vector<GameEvent> events;
 
+        // Decides which bricks drop capsules and what is in them. Only its raw
+        // output is used, never a std distribution: the standard fixes the
+        // former but not the latter, so a seed drops the same capsules with
+        // MSVC and with GCC. A restart keeps it going rather than reseeding.
+        std::mt19937 rng{DEFAULT_SEED};
+
+        // A member rather than only a constant, so a test can make every brick
+        // drop, or none.
+        float capsule_drop_chance = CAPSULE_DROP_CHANCE;
+
         core::ComponentStore<Transform> transforms;
         core::ComponentStore<core::Color> colors;
         core::ComponentStore<CircleShape> circle_shapes;
@@ -63,6 +81,7 @@ namespace game
         core::ComponentStore<Paddle> paddles;
         core::ComponentStore<Brick> bricks;
         core::ComponentStore<Particle> particles;
+        core::ComponentStore<Capsule> capsules;
         core::ComponentStore<Destroyed> destroyed;
 
     private:

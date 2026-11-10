@@ -68,7 +68,7 @@ CMake from pip (`pip install cmake`) works too, but still needs `make`, or
 ctest --test-dir build -C Debug
 ```
 
-179 tests. CI runs them in Debug and Release on Windows for pushes and pull
+216 tests. CI runs them in Debug and Release on Windows for pushes and pull
 requests to `main`. On Linux with GCC 13 they pass in both configurations and
 build with no warnings.
 
@@ -96,6 +96,28 @@ build with no warnings.
 
 A brick's colour is its remaining toughness, so a level can be read at a glance
 and a damaged brick recolours as it is hit.
+
+## Power-ups
+
+Every brick that is destroyed, whatever its toughness, has a 15% chance of
+dropping a capsule where it was, and each of the two kinds is equally likely. A
+capsule is 40 by 14 and falls straight down at 150 units a second. Touching the
+paddle catches it; one that is missed disappears below the floor and costs
+nothing. Catching one scores nothing.
+
+| Capsule | Power-up |
+|---|---|
+| Blue, marked W | **Wide paddle.** The paddle is 180 wide instead of 120 for 10 seconds. Catching another restarts the 10 seconds without making it any wider. A paddle that widens against a wall is kept inside it, and the time does not run while the game is paused. |
+| Green, marked M | **Multi-ball.** Two more balls leave from a ball still in play, at its speed, 30 degrees either side of straight up. There are never more than 5 balls: with 4 in play a catch adds one, with 5 it adds none. With no ball in play it does nothing. |
+
+A life is lost only when the last ball in play falls, and only one life, however
+many balls fall in the same step. Losing a life clears the capsules, puts the
+paddle back to 120 and serves a single ball. The next level and R after a win
+or a loss also start with no capsules, one ball and a normal paddle, and a win
+clears the capsules still falling.
+
+The numbers are in `include/game/Spawn.h` and, for the drop chance,
+`include/game/World.h`.
 
 ## Levels
 
@@ -210,8 +232,28 @@ so that code is tested too; `main.cpp` just passes it the folder.
 Entities are a strongly-typed id and components live in sparse sets - a dense
 array for iteration, a sparse index for lookup. Systems are free functions over
 the `World`. The game advances on a fixed 1/60 timestep with an accumulator, so
-behaviour does not change with frame rate; a test asserts that 600 steps produce
-identical results twice over.
+behaviour does not change with frame rate.
+
+The only randomness that changes play - whether a brick drops a capsule, and
+which kind - comes from a `std::mt19937` that belongs to the `World`. `main`
+seeds it once at startup from `std::random_device`, R keeps using it rather than
+starting it over, and the tests seed it themselves. The drops use the engine's
+raw output rather than a `std::` distribution: the standard fixes the numbers an
+engine produces from a seed, but not what the distributions make of them.
+Particles and screen shake still use `std::rand`; they are for show, and a long
+game played twice with different `std::rand` seeds ends the same, entity by
+entity, apart from the particles.
+
+Two tests check that the same seed and the same input give the same game. One
+asserts that 600 steps produce identical results twice over. The other has an
+autopilot play fifteen minutes of game time with power-ups, on the built-in
+level and a second one, restarting after a win or a loss, and missing on
+purpose now and then. It plays that game twice with the same seed and checks
+that every component, the score, lives, state, level and the generator are
+exactly equal at the end, and that capsules dropped, both kinds were caught,
+some were missed, multi-ball added balls and lives were lost along the way. With
+GCC 13 it ends the same in Debug and Release; other compilers have not been
+checked.
 
 Rendering is one dynamic vertex buffer and a single draw call per frame. Text is
 a hand-encoded 5x7 bitmap font drawn as one quad per lit pixel through that same

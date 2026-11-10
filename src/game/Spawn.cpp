@@ -50,6 +50,18 @@ namespace game
         }
     }
 
+    core::Color capsule_color(PowerUp kind)
+    {
+        switch (kind)
+        {
+        case PowerUp::WidePaddle:
+            return core::Color{0.15f, 0.40f, 0.95f};
+        case PowerUp::MultiBall:
+            return core::Color{0.25f, 0.85f, 0.35f};
+        }
+        return core::Color{};
+    }
+
     core::Entity spawn_paddle(World& world)
     {
         const core::Entity entity = world.create_entity();
@@ -81,6 +93,21 @@ namespace game
         // Starts held, with no velocity. serve_system parks it on the paddle
         // until the player launches.
         world.velocities.add(entity, Velocity{});
+
+        return entity;
+    }
+
+    core::Entity spawn_capsule(World& world, math::Vec2 position, PowerUp kind)
+    {
+        const core::Entity entity = world.create_entity();
+
+        world.transforms.add(
+            entity,
+            Transform{position, math::Vec2{CAPSULE_WIDTH, CAPSULE_HEIGHT}, position}
+        );
+        world.colors.add(entity, capsule_color(kind));
+        world.velocities.add(entity, Velocity{math::Vec2{0.0f, -CAPSULE_SPEED}});
+        world.capsules.add(entity, Capsule{kind});
 
         return entity;
     }
