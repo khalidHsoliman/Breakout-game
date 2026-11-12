@@ -94,6 +94,12 @@ namespace game
             for (int column = 0; column < level.columns; ++column)
             {
                 const int hit_points = level.at(column, row);
+                if (hit_points == STEEL)
+                {
+                    text.push_back('#');
+                    continue;
+                }
+
                 text.push_back(
                     hit_points <= 0 ? '.' : static_cast<char>('0' + (std::min)(hit_points, 9))
                 );
@@ -150,13 +156,20 @@ namespace game
             for (std::size_t column = 0; column < line.size(); ++column)
             {
                 const char character = line[column];
+                const std::size_t index = row * static_cast<std::size_t>(level.columns) + column;
+
+                if (character == '#')
+                {
+                    level.hit_points[index] = STEEL;
+                    continue;
+                }
+
                 if (character < '1' || character > '9')
                 {
                     continue;
                 }
 
-                level.hit_points[row * static_cast<std::size_t>(level.columns) + column] =
-                    character - '0';
+                level.hit_points[index] = character - '0';
             }
         }
 

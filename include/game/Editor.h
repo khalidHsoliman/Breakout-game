@@ -11,12 +11,13 @@ namespace game
 
     Level editor_canvas(const Level& source);
 
-    // Empty -> 1 -> 2 -> ... -> MAX -> empty.
+    // Empty -> 1 -> 2 -> ... -> MAX -> steel -> empty. Above MAX -> empty.
     void cycle_cell(Level& level, Cell cell);
 
     void clear_cell(Level& level, Cell cell);
 
-    // A canvas without bricks is neither saved nor played: clearing nothing
-    // would be an instant win.
+    // A canvas without a brick that can be broken is neither saved nor
+    // played: clearing nothing would be an instant win. Steel does not count,
+    // since STEEL is below zero.
     bool has_bricks(const Level& level);
 }

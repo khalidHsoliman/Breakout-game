@@ -68,7 +68,7 @@ CMake from pip (`pip install cmake`) works too, but still needs `make`, or
 ctest --test-dir build -C Debug
 ```
 
-216 tests. CI runs them in Debug and Release on Windows for pushes and pull
+274 tests. CI runs them in Debug and Release on Windows for pushes and pull
 requests to `main`. On Linux with GCC 13 they pass in both configurations and
 build with no warnings.
 
@@ -86,7 +86,7 @@ build with no warnings.
 
 | Input | In the editor |
 |---|---|
-| Left click | Cycle a cell: empty, 1, 2, 3, 4, empty |
+| Left click | Cycle a cell: empty, 1, 2, 3, 4, steel, empty (a 5 to 9 from a file goes to empty) |
 | Right click | Clear a cell |
 | Left / Right | Pick a slot, 1 to 9 |
 | S | Save the canvas to the slot |
@@ -95,7 +95,7 @@ build with no warnings.
 | E | Back to the game, discarding unsaved edits |
 
 A brick's colour is its remaining toughness, so a level can be read at a glance
-and a damaged brick recolours as it is hit.
+and a damaged brick recolours as it is hit. Steel is grey in the game.
 
 ## Power-ups
 
@@ -103,7 +103,8 @@ Every brick that is destroyed, whatever its toughness, has a 15% chance of
 dropping a capsule where it was, and each of the two kinds is equally likely. A
 capsule is 40 by 14 and falls straight down at 150 units a second. Touching the
 paddle catches it; one that is missed disappears below the floor and costs
-nothing. Catching one scores nothing.
+nothing. Catching one scores nothing. Steel is never destroyed, so it never
+drops one.
 
 | Capsule | Power-up |
 |---|---|
@@ -118,6 +119,63 @@ clears the capsules still falling.
 
 The numbers are in `include/game/Spawn.h` and, for the drop chance,
 `include/game/World.h`.
+
+## Steel
+
+A `#` in a level file is a steel brick, which cannot be broken. The ball bounces
+off it as off any brick, but a steel hit does no damage, scores nothing, drops
+no capsule, makes no particles and does not speed the ball up. When a ball
+touches a brick and steel in the same step, only the deeper contact counts, as
+between two bricks.
+
+A level is cleared when its last brick that can be broken goes, however much
+steel is left. A file with only steel is refused, like one with no bricks.
+
+The level check does not look at where the steel is, so a level can be made
+that cannot be finished. The gaps between bricks are 4 units and the ball is 16
+wide, so a brick boxed in by steel on every side can never be reached. This
+level passes the check, and can only end in a game over:
+
+```
+###
+#1#
+###
+```
+
+### A ball stuck between steel
+
+Steel can trap a ball. Before the rule below, in this level, with the ball
+started at the centre of each cell of the middle row, going up and to the right
+at every whole angle from 5 to 60 degrees off vertical, 11 of the 560 starts
+had still not come back down below the bricks after 3 minutes, bouncing between
+the steel rows or in the strip above the top one. With the rule, all 11 are
+back on the paddle after exactly 10 seconds:
+
+```
+##########
+..........
+####.#####
+........1.
+```
+
+So in a level with steel, a ball that goes 10 seconds without touching the
+paddle or a brick that can be broken goes back onto the paddle, with no life
+lost, to be served again. As after a lost life, the capsules still falling are
+cleared and a wide paddle goes back to normal. If another ball is still in
+play, the stuck one is just removed instead.
+
+Each ball keeps its own time. Any hit on a brick that can be broken restarts it,
+whether or not the brick breaks, and so do the paddle and being held on it;
+steel and walls do not. The two balls a multi-ball adds start from zero. The
+time does not run while the game is paused, and nothing random is involved, so
+a seeded game still plays the same every time.
+
+In a level without steel none of this runs, so those levels play exactly as
+they did before steel: 20 games of 15 minutes each, played by the same autopilot
+as the long-game test and compared after every step with the code from before
+steel, came out identical.
+
+The 10 seconds is `STUCK_BALL_TIME` in `include/game/Systems.h`.
 
 ## Levels
 
@@ -141,11 +199,11 @@ the ones after it move up: with `level-2.txt` bad, `level-3.txt` is LEVEL 2.
 ### The file format
 
 One line per row of bricks, top row first. A digit from 1 to 9 is a brick that
-takes that many hits, and `.`, `0` or a space is an empty cell. Rows may be of
-different lengths; short rows are padded with empty cells, and trailing spaces
-count as columns. Blank lines above and below the grid are ignored. LF and CRLF
-line endings both work, and so does a UTF-8 byte order mark at the start, as
-Notepad may write.
+takes that many hits, `#` is a steel brick, and `.`, `0` or a space is an empty
+cell. Rows may be of different lengths; short rows are padded with empty cells,
+and trailing spaces count as columns. Blank lines above and below the grid are
+ignored. LF and CRLF line endings both work, and so does a UTF-8 byte order mark
+at the start, as Notepad may write.
 
 ```
 ..111111..
@@ -159,12 +217,12 @@ A file is bad, and skipped, when:
 
 - it holds any other character, a tab included
 - it is empty or only blank lines
-- it has no bricks
-- a brick is in row 18 or lower, counted from the first non-blank line, where it
-  would overlap the ball held on the paddle (rows of only empty cells below the
-  bricks are fine)
-- a row is more than 47 columns wide, where a brick would be narrower than the
-  distance the fastest ball moves in one step
+- it has no bricks, or only steel bricks, which could never be cleared
+- a brick, steel included, is in row 18 or lower, counted from the first
+  non-blank line, where it would overlap the ball held on the paddle (rows of
+  only empty cells below the bricks are fine)
+- a row is more than 47 columns wide, steel and spaces included, where a brick
+  would be narrower than the distance the fastest ball moves in one step
 
 The 17 rows and 47 columns are not typed in anywhere: they are worked out from
 the game's own layout for its 800 by 600 play area.
@@ -174,8 +232,9 @@ reported on stderr, which on Windows is the console window the game opens
 with, with the file name, line and column in front:
 
 ```
-level-2.txt:3:5: 'x' is not allowed: a level may only contain digits, '.' and spaces
-level-3.txt: the file is empty
+level-2.txt:2:2: 'x' is not allowed: a level may only contain digits, '#', '.' and spaces
+level-3.txt: the level has only steel bricks, which cannot be broken
+level-4.txt:18:1: a brick in row 18 is too low: at most 17 rows fit above the paddle
 ```
 
 Lines count from the top of the file, blank lines included; columns count from
@@ -187,7 +246,9 @@ The editor has nine slots, and they are the level files: slot n is
 `levels/level-n.txt`. Saving creates the `levels` folder if it is missing and
 overwrites the slot. A canvas with no bricks is not saved (NOTHING TO SAVE),
 and Enter on one does nothing but show NOTHING TO PLAY, since clearing nothing
-would be an instant win.
+would be an instant win. A canvas whose only bricks are steel is not saved
+either (NOTHING TO SAVE), and the file already in the slot is left as it was.
+Steel is saved as `#` and loads back as steel.
 
 Loading a slot uses the same checks as the game. A bad file shows BAD LEVEL FILE
 and its full error goes to stderr. A file bigger than the editor's 10 by 6 grid

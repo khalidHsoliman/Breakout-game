@@ -37,6 +37,8 @@ namespace game
     {
         switch (hit_points)
         {
+        case STEEL:
+            return core::Color{0.50f, 0.52f, 0.56f};
         case 1:
             return core::Color{0.95f, 0.82f, 0.30f};
         case 2:
@@ -209,7 +211,8 @@ namespace game
             for (int column = 0; column < level.columns; ++column)
             {
                 const int hit_points = level.at(column, row);
-                if (hit_points <= 0)
+                const bool steel = hit_points == STEEL;
+                if (hit_points <= 0 && !steel)
                 {
                     continue;
                 }
@@ -219,7 +222,15 @@ namespace game
 
                 world.transforms.add(entity, Transform{center, size, center});
                 world.colors.add(entity, brick_color(hit_points));
-                world.bricks.add(entity, Brick{hit_points});
+
+                if (steel)
+                {
+                    world.steel.add(entity, Steel{});
+                }
+                else
+                {
+                    world.bricks.add(entity, Brick{hit_points});
+                }
             }
         }
     }

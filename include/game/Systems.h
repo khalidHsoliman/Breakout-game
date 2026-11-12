@@ -16,6 +16,11 @@ namespace game
     // the instant it launches.
     inline constexpr float SERVE_GAP = 2.0f;
 
+    // Steel can trap a ball where it bounces for ever. In a level with steel,
+    // a ball that goes this long without touching the paddle or a breakable
+    // brick is taken out of play.
+    inline constexpr float STUCK_BALL_TIME = 10.0f;
+
     // The ball cannot cross a brick in a single step.
     static_assert(
         MAX_BALL_SPEED * FIXED_DT < BRICK_HEIGHT,
@@ -34,6 +39,13 @@ namespace game
     // the paddle, and removes capsules that are caught or fall past the floor.
     // Playing only, so the time stands still while paused.
     void power_up_system(World& world, float dt);
+
+    // In a level with steel only, so a level without any plays exactly as
+    // before. Runs each ball's clock, and takes a ball that has gone
+    // STUCK_BALL_TIME without a touch out of play: removed if another ball is
+    // still in play, otherwise back onto the paddle to be served again, as
+    // after a lost life but with no life lost.
+    void stuck_ball_system(World& world, float dt);
 
     // Clearing a level moves on to the next, keeping score and lives; clearing
     // the last one wins.

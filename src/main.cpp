@@ -232,11 +232,14 @@ namespace
                     );
                 }
 
+                // Steel in its grey, as in the game; only a cell with
+                // nothing in it is drawn as empty.
                 const int hit_points = level.at(column, row);
+                const bool brick = hit_points > 0 || hit_points == game::STEEL;
                 renderer.draw_quad(
                     center,
                     size,
-                    hit_points > 0 ? game::brick_color(hit_points) : EMPTY_CELL_COLOR
+                    brick ? game::brick_color(hit_points) : EMPTY_CELL_COLOR
                 );
             }
         }
@@ -466,18 +469,27 @@ int main()
                 input.clear_one_shots();
             }
 
+            // Every event spelled out, so a new one cannot fall through to a
+            // sound nobody chose for it.
             for (const game::GameEvent event : world.events)
             {
-                audio.play(
-                    event == game::GameEvent::BrickHit
-                        ? platform::Sound::BrickHit
-                        : platform::Sound::PaddleBounce
-                    );
-
-                if (event == game::GameEvent::BrickHit)
+                switch (event)
                 {
+                case game::GameEvent::BrickHit:
+                    audio.play(platform::Sound::BrickHit);
                     shake = SHAKE_MAGNITUDE;
                     freeze_steps = HIT_STOP_STEPS;
+                    break;
+
+                case game::GameEvent::SteelHit:
+                    // Heard like the paddle, with no shake and no pause: a
+                    // level with a lot of steel would stutter otherwise.
+                    audio.play(platform::Sound::PaddleBounce);
+                    break;
+
+                case game::GameEvent::PaddleBounce:
+                    audio.play(platform::Sound::PaddleBounce);
+                    break;
                 }
             }
 

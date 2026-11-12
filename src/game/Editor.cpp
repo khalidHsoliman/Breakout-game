@@ -33,8 +33,20 @@ namespace game
         }
 
         const int hit_points = level.at(cell.column, cell.row);
-        level.set(cell.column, cell.row,
-                  hit_points >= MAX_EDITABLE_HIT_POINTS ? 0 : hit_points + 1);
+
+        // Steel comes after the toughest brick. 5 to 9, from a file, go to
+        // empty rather than to steel, as they did before steel existed.
+        int next = hit_points + 1;
+        if (hit_points == MAX_EDITABLE_HIT_POINTS)
+        {
+            next = STEEL;
+        }
+        else if (hit_points == STEEL || hit_points > MAX_EDITABLE_HIT_POINTS)
+        {
+            next = 0;
+        }
+
+        level.set(cell.column, cell.row, next);
     }
 
     void clear_cell(Level& level, Cell cell)

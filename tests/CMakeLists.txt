@@ -22,7 +22,9 @@ add_executable(breakout_tests
     progression_tests.cpp
     level_check_tests.cpp
     level_files_tests.cpp
-    power_up_tests.cpp)
+    power_up_tests.cpp
+    steel_tests.cpp
+    stuck_ball_tests.cpp)
 
 target_link_libraries(breakout_tests PRIVATE
     GTest::gtest_main

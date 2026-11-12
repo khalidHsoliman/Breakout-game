@@ -80,6 +80,7 @@ namespace game
         core::ComponentStore<Ball> balls;
         core::ComponentStore<Paddle> paddles;
         core::ComponentStore<Brick> bricks;
+        core::ComponentStore<Steel> steel;
         core::ComponentStore<Particle> particles;
         core::ComponentStore<Capsule> capsules;
         core::ComponentStore<Destroyed> destroyed;

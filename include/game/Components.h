@@ -24,6 +24,10 @@ namespace game
     struct Ball
     {
         float radius = 0.0f;
+
+        // Seconds since it last touched the paddle or a breakable brick, or
+        // was held on the paddle. Steel and walls do not count.
+        float time_since_touch = 0.0f;
     };
 
     struct Paddle
@@ -38,6 +42,11 @@ namespace game
     {
         int hit_points = 1;
     };
+
+    // Tag: a brick that cannot be broken. The ball bounces off it, but it is
+    // never damaged, scores nothing and drops nothing. It is not a Brick, so a
+    // level is cleared when the last Brick goes, however much steel is left.
+    struct Steel {};
 
     enum class PowerUp
     {

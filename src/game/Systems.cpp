@@ -53,8 +53,9 @@ namespace game
             // lifecycle_system's job rather than a collision.
         }
 
-        void bounce_off_paddles(World& world, Transform& transform, Velocity& velocity, float radius)
+        void bounce_off_paddles(World& world, Transform& transform, Velocity& velocity, Ball& ball_state)
         {
+            const float radius = ball_state.radius;
             const math::Circle ball{transform.position, radius};
             const std::vector<core::Entity>& entities = world.paddles.entities();
 
@@ -80,6 +81,7 @@ namespace game
                 const float speed = math::length(velocity.value);
 
                 velocity.value = math::paddle_bounce_direction(offset, MAX_BOUNCE_ANGLE) * speed;
+                ball_state.time_since_touch = 0.0f;
 
                 world.events.push_back(GameEvent::PaddleBounce);
                 return;
@@ -240,6 +242,23 @@ namespace game
             }
         }
 
+        // The ball goes back onto the paddle to be served again, with one
+        // ball, no capsules and a normal paddle. What losing the last ball
+        // does, apart from the life.
+        void serve_again(World& world, core::Entity ball)
+        {
+            Velocity* velocity = world.velocities.find(ball);
+            if (velocity != nullptr)
+            {
+                velocity->value = math::Vec2{};
+            }
+
+            clear_particles(world);
+            clear_capsules(world);
+            narrow_paddles(world);
+            world.state = GameState::Ready;
+        }
+
         void widen_paddle(const World& world, Transform& transform, Paddle& paddle)
         {
             // Set rather than scaled, so another catch restarts the time
@@ -261,17 +280,15 @@ namespace game
             }
         }
 
-        void bounce_off_bricks(World& world, Transform& transform, Velocity& velocity, float radius)
+        // Keeps hit_entity and deepest at the deepest contact so far, looking
+        // through one store of bricks.
+        template <typename Component>
+        void find_deepest_contact(const World& world, const core::ComponentStore<Component>& store,
+                                  const math::Circle& ball, core::Entity& hit_entity, math::Contact& deepest)
         {
-            const math::Circle ball{transform.position, radius};
-            const std::vector<core::Entity>& entities = world.bricks.entities();
+            const std::vector<core::Entity>& entities = store.entities();
 
-            // Resolve only the deepest contact. Reflecting off several bricks in
-            // one step can cancel out and send the ball straight through.
-            core::Entity hit_entity = core::NULL_ENTITY;
-            math::Contact deepest;
-
-            for (std::size_t i = 0; i < world.bricks.size(); i++)
+            for (std::size_t i = 0; i < store.size(); i++)
             {
                 const core::Entity entity = entities[i];
                 if (!is_alive(world, entity))
@@ -292,6 +309,21 @@ namespace game
                     deepest = contact;
                 }
             }
+        }
+
+        void bounce_off_bricks(World& world, Transform& transform, Velocity& velocity, Ball& ball_state)
+        {
+            const math::Circle ball{transform.position, ball_state.radius};
+
+            // Resolve only the deepest contact, steel included. Reflecting off
+            // several bricks in one step can cancel out and send the ball
+            // straight through. Bricks are searched first, so of two equally
+            // deep contacts the one that can be broken is hit.
+            core::Entity hit_entity = core::NULL_ENTITY;
+            math::Contact deepest;
+
+            find_deepest_contact(world, world.bricks, ball, hit_entity, deepest);
+            find_deepest_contact(world, world.steel, ball, hit_entity, deepest);
 
             if (hit_entity == core::NULL_ENTITY)
             {
@@ -301,9 +333,20 @@ namespace game
             transform.position += deepest.normal * (deepest.penetration + PUSH_OUT_TOLERANCE);
             velocity.value = math::reflect(velocity.value, deepest.normal);
 
+            // Steel only turns the ball: no damage, no score, no speed, nothing
+            // drawn from the generator, no particles and no capsule.
+            if (world.steel.has(hit_entity))
+            {
+                world.events.push_back(GameEvent::SteelHit);
+                return;
+            }
+
             Brick* brick = world.bricks.find(hit_entity);
             if (brick != nullptr)
             {
+                // Any hit on a brick that can be broken, whether or not it breaks.
+                ball_state.time_since_touch = 0.0f;
+
                 const int brick_hit_points = brick->hit_points;
                 brick->hit_points -= 1;
 
@@ -398,11 +441,12 @@ namespace game
                 continue;
             }
 
-            const float radius = balls[i].radius;
+            // Nothing below adds or removes balls, so this stays valid.
+            Ball& ball = *world.balls.find(entity);
 
-            bounce_off_edges(world, *transform, *velocity, radius);
-            bounce_off_paddles(world, *transform, *velocity, radius);
-            bounce_off_bricks(world, *transform, *velocity, radius);
+            bounce_off_edges(world, *transform, *velocity, balls[i].radius);
+            bounce_off_paddles(world, *transform, *velocity, ball);
+            bounce_off_bricks(world, *transform, *velocity, ball);
         }
     }
 
@@ -456,16 +500,66 @@ namespace game
         // The last ball: one life, however many fell in this step.
         world.lives -= 1;
 
-        Velocity* velocity = world.velocities.find(fallen[0]);
-        if (velocity != nullptr)
+        serve_again(world, fallen[0]);
+        if (world.lives <= 0)
         {
-            velocity->value = math::Vec2{};
+            world.state = GameState::GameOver;
+        }
+    }
+
+    void stuck_ball_system(World& world, float dt)
+    {
+        // Only steel can trap a ball. Without it nothing here runs, not even
+        // the clocks, so a level without steel plays exactly as before.
+        if (world.steel.size() == 0)
+        {
+            return;
         }
 
-        clear_particles(world);
-        clear_capsules(world);
-        narrow_paddles(world);
-        world.state = (world.lives <= 0) ? GameState::GameOver : GameState::Ready;
+        const std::vector<core::Entity>& entities = world.balls.entities();
+
+        std::vector<core::Entity> stuck;
+        bool others_in_play = false;
+
+        for (std::size_t i = 0; i < world.balls.size(); i++)
+        {
+            const core::Entity entity = entities[i];
+            if (!in_play(world, entity))
+            {
+                continue;
+            }
+
+            Ball& ball = *world.balls.find(entity);
+            ball.time_since_touch += dt;
+
+            if (ball.time_since_touch >= STUCK_BALL_TIME)
+            {
+                stuck.push_back(entity);
+            }
+            else
+            {
+                others_in_play = true;
+            }
+        }
+
+        if (stuck.empty())
+        {
+            return;
+        }
+
+        // While another ball is in play, a stuck one is just gone.
+        // Otherwise one goes back onto the paddle and the rest go, so the next
+        // serve has exactly one ball.
+        const std::size_t first_to_remove = others_in_play ? 0 : 1;
+        for (std::size_t i = first_to_remove; i < stuck.size(); i++)
+        {
+            world.destroyed.add(stuck[i], Destroyed{});
+        }
+
+        if (!others_in_play)
+        {
+            serve_again(world, stuck[0]);
+        }
     }
 
     void trail_system(World& world)
@@ -624,6 +718,9 @@ namespace game
                     continue;
                 }
 
+                // Held on the paddle counts as touching it.
+                world.balls.find(entities[i])->time_since_touch = 0.0f;
+
                 // Parked on the paddle, so moving the paddle aims the shot.
                 transform->position = math::Vec2{
                     paddle->position.x,
@@ -699,6 +796,7 @@ namespace game
             power_up_system(world, dt);
             trail_system(world);
             particle_system(world, dt);
+            stuck_ball_system(world, dt);
             lifecycle_system(world);
             win_system(world);
             sweep_destroyed(world);

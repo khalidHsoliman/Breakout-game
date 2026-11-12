@@ -12,6 +12,7 @@
 
 #include "game/Editor.h"
 #include "game/LevelFiles.h"
+#include "game/Spawn.h"
 
 namespace
 {
@@ -109,7 +110,7 @@ TEST_F(LevelFiles, ABadLevelTwoIsSkippedAndTheOthersStillLoad)
 
     ASSERT_EQ(loaded.errors.size(), 1u);
     EXPECT_EQ(loaded.errors[0],
-              "level-2.txt:3:2: 'x' is not allowed: a level may only contain digits, '.' and spaces");
+              "level-2.txt:3:2: 'x' is not allowed: a level may only contain digits, '#', '.' and spaces");
 }
 
 TEST_F(LevelFiles, AProblemWithTheWholeFileHasNoLineOrColumn)
@@ -124,6 +125,34 @@ TEST_F(LevelFiles, AProblemWithTheWholeFileHasNoLineOrColumn)
     EXPECT_EQ(loaded.errors, (std::vector<std::string>{
                                  "level-2.txt: the file is empty",
                                  "level-3.txt: the level has no bricks",
+                             }));
+}
+
+TEST_F(LevelFiles, ALevelWithSteelLoadsWithItsSteel)
+{
+    write(1, "1#1\n#2#\n");
+
+    const game::LoadedLevels loaded = game::load_levels(folder);
+
+    EXPECT_TRUE(loaded.errors.empty());
+    ASSERT_EQ(loaded.levels.size(), 1u);
+    EXPECT_EQ(loaded.levels[0].at(1, 0), game::STEEL);
+    EXPECT_EQ(loaded.levels[0].at(0, 1), game::STEEL);
+    EXPECT_EQ(loaded.levels[0].at(1, 1), 2);
+}
+
+TEST_F(LevelFiles, AFileOfOnlySteelIsSkippedAndReported)
+{
+    write(1, "1\n");
+    write(2, "###\n");
+    write(3, "11\n");
+
+    const game::LoadedLevels loaded = game::load_levels(folder);
+
+    ASSERT_EQ(loaded.levels.size(), 2u);
+    EXPECT_EQ(loaded.levels[1], game::parse_level("11"));
+    EXPECT_EQ(loaded.errors, (std::vector<std::string>{
+                                 "level-2.txt: the level has only steel bricks, which cannot be broken",
                              }));
 }
 
@@ -305,6 +334,23 @@ TEST_F(EditorSlots, SaveThenLoadGivesTheSameCanvas)
     EXPECT_EQ(loaded.level, canvas);
 }
 
+// Saved as '#', and read back as steel, by the editor and by the game.
+TEST_F(EditorSlots, SteelIsSavedAndLoadedBack)
+{
+    game::Level canvas = sample_canvas();
+    canvas.set(1, 0, game::STEEL);
+    canvas.set(game::EDITOR_COLUMNS - 1, game::EDITOR_ROWS - 1, game::STEEL);
+
+    ASSERT_TRUE(game::save_slot(folder, 5, canvas).ok);
+    const std::string text = read_back(5);
+    EXPECT_EQ(text.substr(0, 3), "1#.");
+    EXPECT_EQ(text.substr(text.size() - 3), ".#\n");
+
+    const game::SlotResult loaded = game::load_slot(folder, 5);
+    EXPECT_TRUE(loaded.ok) << loaded.error;
+    EXPECT_EQ(loaded.level, canvas);
+}
+
 // What the editor saves, the game plays.
 TEST_F(EditorSlots, ASavedSlotIsALevelOfTheGame)
 {
@@ -351,7 +397,7 @@ TEST_F(EditorSlots, ABadFileIsRefusedOnLoadWithTheFullErrorForStderr)
 
     EXPECT_FALSE(refused.ok);
     EXPECT_EQ(refused.status, "BAD LEVEL FILE");
-    EXPECT_EQ(refused.error, "level-4.txt:2:2: 'x' is not allowed: a level may only contain digits, '.' and spaces");
+    EXPECT_EQ(refused.error, "level-4.txt:2:2: 'x' is not allowed: a level may only contain digits, '#', '.' and spaces");
 }
 
 TEST_F(EditorSlots, AFileBiggerThanTheEditorIsRefusedNotCutDown)
@@ -437,4 +483,61 @@ TEST_F(EditorSlots, EveryStatusIsSomethingTheFontCanDraw)
     {
         EXPECT_TRUE(font_can_draw(result.status)) << '"' << result.status << '"';
     }
+}
+
+// ---- Steel in the editor's slots --------------------------------------------
+
+// Like an empty canvas: refused, nothing created, and a level already in the
+// slot left exactly as it was.
+TEST_F(EditorSlots, ACanvasOfOnlySteelIsNotSavedAndTheSlotIsLeftAlone)
+{
+    game::Level canvas = game::editor_canvas(game::Level{});
+    for (int column = 0; column < game::EDITOR_COLUMNS; ++column)
+    {
+        canvas.set(column, 2, game::STEEL);
+    }
+
+    const fs::path missing = root / "not-yet";
+    const game::SlotResult refused = game::save_slot(missing, 2, canvas);
+    EXPECT_FALSE(refused.ok);
+    EXPECT_EQ(refused.status, "NOTHING TO SAVE");
+    EXPECT_TRUE(refused.error.empty());
+    EXPECT_FALSE(fs::exists(missing)) << "not even the folder";
+
+    write(2, "1#1\n");
+    const game::SlotResult again = game::save_slot(folder, 2, canvas);
+    EXPECT_FALSE(again.ok);
+    EXPECT_EQ(again.status, "NOTHING TO SAVE");
+    EXPECT_EQ(read_back(2), "1#1\n");
+}
+
+// Steel made with the mouse, saved, loaded back, and played by the game.
+TEST_F(EditorSlots, SteelMadeByClickingIsSavedLoadedAndPlayed)
+{
+    game::Level canvas = game::editor_canvas(game::Level{});
+    const game::Cell steel_cell{2, 1, true};
+    for (int click = 0; click < game::MAX_EDITABLE_HIT_POINTS + 1; click++)
+    {
+        game::cycle_cell(canvas, steel_cell);
+    }
+    game::cycle_cell(canvas, game::Cell{3, 1, true});
+    ASSERT_EQ(canvas.at(2, 1), game::STEEL);
+    ASSERT_TRUE(game::has_bricks(canvas));
+
+    ASSERT_TRUE(game::save_slot(folder, 1, canvas).ok);
+    EXPECT_EQ(read_back(1), "..........\n..#1......\n..........\n..........\n..........\n..........\n");
+
+    const game::SlotResult loaded = game::load_slot(folder, 1);
+    EXPECT_TRUE(loaded.ok) << loaded.error;
+    EXPECT_EQ(loaded.level, canvas);
+
+    const game::LoadedLevels levels = game::load_levels(folder);
+    EXPECT_TRUE(levels.errors.empty());
+    ASSERT_EQ(levels.levels.size(), 1u);
+
+    game::World world;
+    world.size = game::WORLD_SIZE;
+    game::start_game(world, levels.levels);
+    EXPECT_EQ(world.steel.size(), 1u);
+    EXPECT_EQ(world.bricks.size(), 1u);
 }

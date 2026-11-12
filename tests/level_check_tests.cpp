@@ -137,6 +137,23 @@ TEST(CheckLevelText, EmptyRowsAboveBricksStillPushThemDown)
     EXPECT_EQ(gap_in_middle->line, 18);
 }
 
+// Steel sits where a brick would, so it has to clear the held ball too.
+TEST(CheckLevelText, SteelInRowSeventeenIsFine)
+{
+    EXPECT_EQ(check(repeat_rows(16, "1111") + "####\n"), std::nullopt);
+}
+
+TEST(CheckLevelText, SteelInRowEighteenIsNot)
+{
+    const auto problem = check(repeat_rows(17, "1111") + ".##.\n");
+
+    ASSERT_TRUE(problem.has_value());
+    EXPECT_EQ(problem->line, 18);
+    EXPECT_EQ(problem->column, 2);   // the first steel brick in the row
+    EXPECT_TRUE(contains(problem->message, "row 18")) << problem->message;
+    EXPECT_TRUE(contains(problem->message, "17 rows")) << problem->message;
+}
+
 // ---- Columns ----------------------------------------------------------------
 
 TEST(CheckLevelText, FortySevenColumnsAreFine)
@@ -175,6 +192,21 @@ TEST(CheckLevelText, BlankLinesAroundTheGridMayBeWider)
 TEST(CheckLevelText, RaggedRowsAreFine)
 {
     EXPECT_EQ(check("111\n1\n11"), std::nullopt);
+}
+
+TEST(CheckLevelText, FortySevenColumnsWithSteelAreFine)
+{
+    EXPECT_EQ(check(std::string(46, '#') + "1"), std::nullopt);
+}
+
+TEST(CheckLevelText, FortyEightColumnsWithSteelAreNot)
+{
+    const auto problem = check("11\n" + std::string(48, '#'));
+
+    ASSERT_TRUE(problem.has_value());
+    EXPECT_EQ(problem->line, 2);
+    EXPECT_EQ(problem->column, 48);
+    EXPECT_TRUE(contains(problem->message, "48 columns")) << problem->message;
 }
 
 // ---- Characters -------------------------------------------------------------
@@ -245,6 +277,21 @@ TEST(CheckLevelText, TheFirstProblemInReadingOrderIsReported)
     EXPECT_EQ(problem->column, 48);
 }
 
+TEST(CheckLevelText, HashIsSteelAndAllowed)
+{
+    EXPECT_EQ(check("1#1\n###\n"), std::nullopt);
+    EXPECT_EQ(check("#\r\n1\r\n"), std::nullopt);
+}
+
+// Steel is listed with what a level may contain.
+TEST(CheckLevelText, TheBadCharacterMessageMentionsSteel)
+{
+    const auto problem = check("1x");
+
+    ASSERT_TRUE(problem.has_value());
+    EXPECT_EQ(problem->message, "'x' is not allowed: a level may only contain digits, '#', '.' and spaces");
+}
+
 // ---- Byte order mark --------------------------------------------------------
 
 TEST(CheckLevelText, ALeadingBomIsSkippedAndIsNotAColumn)
@@ -289,6 +336,31 @@ TEST(CheckLevelText, AnEmptyFileIsAProblem)
 TEST(CheckLevelText, ALevelWithNoBricksIsAProblem)
 {
     EXPECT_EQ(check("...\n. .\n"), (game::LevelProblem{0, 0, "the level has no bricks"}));
+}
+
+// Steel alone can never be cleared, which is as good as no bricks at all.
+TEST(CheckLevelText, ALevelWithOnlySteelIsAProblem)
+{
+    const game::LevelProblem only_steel{0, 0, "the level has only steel bricks, which cannot be broken"};
+
+    EXPECT_EQ(check("#"), only_steel);
+    EXPECT_EQ(check("###\n.#.\n0 0\n"), only_steel);
+}
+
+// A level with no bricks at all says so, steel or not.
+TEST(CheckLevelText, NoBricksIsStillReportedAsNoBricks)
+{
+    EXPECT_EQ(check("...\n000\n"), (game::LevelProblem{0, 0, "the level has no bricks"}));
+}
+
+// A problem at a place in the file comes first, as any other does.
+TEST(CheckLevelText, SteelTooLowIsReportedBeforeOnlySteel)
+{
+    const auto problem = check(repeat_rows(18, "#"));
+
+    ASSERT_TRUE(problem.has_value());
+    EXPECT_EQ(problem->line, 18);
+    EXPECT_EQ(problem->column, 1);
 }
 
 // ---- Levels that must pass --------------------------------------------------
@@ -347,4 +419,21 @@ TEST(CheckLevelText, WhatItAcceptsParsesIntoALevelThatFits)
         }
         EXPECT_TRUE(has_brick) << text;
     }
+}
+
+// What the check accepts with steel in it, parse_level reads as steel in the
+// same places, inside the limits.
+TEST(CheckLevelText, AcceptedSteelParsesAsSteelWhereItWas)
+{
+    const std::string text = "\n1#\n" + repeat_rows(15, ".") + "#" + std::string(45, '.') + "#\n";
+    ASSERT_EQ(check(text), std::nullopt);
+
+    const game::Level level = game::parse_level(text);
+
+    EXPECT_EQ(level.columns, game::max_level_columns(WORLD));
+    EXPECT_EQ(level.rows, game::max_level_rows(WORLD));
+    EXPECT_EQ(level.at(0, 0), 1);
+    EXPECT_EQ(level.at(1, 0), game::STEEL);
+    EXPECT_EQ(level.at(0, 16), game::STEEL);
+    EXPECT_EQ(level.at(46, 16), game::STEEL);
 }

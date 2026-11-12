@@ -11,7 +11,7 @@ namespace game
     // What is wrong with a level file, and where. Line and column count from 1
     // and are positions in the file itself: blank lines at the top count, a
     // leading byte order mark does not. Both are 0 when the problem is the
-    // file as a whole (empty, or no bricks).
+    // file as a whole (empty, no bricks, or only steel bricks).
     struct LevelProblem
     {
         int line = 0;
@@ -36,9 +36,10 @@ namespace game
     std::string_view skip_bom(std::string_view text);
 
     // The first problem in the raw text of a level file, in reading order, or
-    // nothing if the game can play it. Allowed: digits ('0' is empty), '.',
-    // spaces, CRLF or LF line ends, rows of different lengths, and a leading
-    // byte order mark. Separate from parse_level, which stays tolerant for the
+    // nothing if the game can play it. Allowed: digits ('0' is empty), '#'
+    // (steel, which counts towards the row and column limits but not as a
+    // brick that can be broken), '.', spaces, CRLF or LF line ends, rows of
+    // different lengths, and a leading byte order mark. Separate from parse_level, which stays tolerant for the
     // editor and the tests.
     std::optional<LevelProblem> check_level_text(std::string_view text, math::Vec2 world_size);
 }

@@ -20,7 +20,7 @@ namespace game
         // size that makes no sense.
         constexpr int SEARCH_LIMIT = 1000;
 
-        constexpr const char* ALLOWED = "a level may only contain digits, '.' and spaces";
+        constexpr const char* ALLOWED = "a level may only contain digits, '#', '.' and spaces";
 
         // The same lines parse_level sees: split on LF, one trailing CR
         // removed. It has to stay that way, or the rows counted here would not
@@ -62,7 +62,8 @@ namespace game
 
         bool is_allowed(char character)
         {
-            return character == '.' || character == ' ' || (character >= '0' && character <= '9');
+            return character == '.' || character == ' ' || character == '#' ||
+                   (character >= '0' && character <= '9');
         }
 
         std::string describe(char character)
@@ -174,7 +175,10 @@ namespace game
         const std::size_t max_rows = static_cast<std::size_t>(max_level_rows(world_size));
         const std::size_t max_columns = static_cast<std::size_t>(max_level_columns(world_size));
 
+        // Steel counts as a brick for the limits, but only a brick that can
+        // be broken makes a level that can be cleared.
         bool has_bricks = false;
+        bool has_breakable_bricks = false;
 
         // One pass in reading order, so the problem reported is the first one
         // a person reading the file would reach.
@@ -201,9 +205,11 @@ namespace game
                                       " fit (trailing spaces count too)");
                 }
 
-                if (character >= '1' && character <= '9')
+                const bool breakable = character >= '1' && character <= '9';
+                if (breakable || character == '#')
                 {
                     has_bricks = true;
+                    has_breakable_bricks = has_breakable_bricks || breakable;
 
                     // A brick is never on a blank line, so in_grid holds here.
                     const std::size_t row = line_index - first;
@@ -226,6 +232,11 @@ namespace game
         if (!has_bricks)
         {
             return LevelProblem{0, 0, "the level has no bricks"};
+        }
+
+        if (!has_breakable_bricks)
+        {
+            return LevelProblem{0, 0, "the level has only steel bricks, which cannot be broken"};
         }
 
         return std::nullopt;

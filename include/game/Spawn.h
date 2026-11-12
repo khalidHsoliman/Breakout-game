@@ -33,7 +33,7 @@ namespace game
     inline constexpr int MAX_BALLS = 5;
 
     // Colour carries the remaining toughness, so it has to be re-applied when a
-    // brick is damaged - not only when it is spawned.
+    // brick is damaged - not only when it is spawned. STEEL is grey.
     core::Color brick_color(int hit_points);
 
     // Blue for the wide paddle, green for multi-ball: no brick is either.
@@ -42,8 +42,9 @@ namespace game
     core::Entity spawn_paddle(World& world);
     core::Entity spawn_ball(World& world);
 
-    // Turns the grid into brick entities. Geometry is derived from the world
-    // size and the grid dimensions, so the same level fits any play area.
+    // Turns the grid into brick entities, and STEEL cells into steel entities
+    // in their own store. Geometry is derived from the world size and the grid
+    // dimensions, so the same level fits any play area.
     void spawn_level(World& world, const Level& level);
 
     // A capsule holding kind, falling straight down from position.

@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <cstddef>
+#include <string>
+
 #include "game/Editor.h"
 #include "game/LevelLayout.h"
 
@@ -73,7 +76,7 @@ TEST(LevelLayout, AnEmptyLevelHasNoCells)
     EXPECT_FALSE(game::cell_at(game::Level{}, WORLD, math::Vec2{400.0f, 300.0f}).inside);
 }
 
-TEST(Editor, CycleWalksUpToTheCapThenBackToEmpty)
+TEST(Editor, CycleWalksUpToTheCapThenSteelThenBackToEmpty)
 {
     game::Level level = grid();
     const game::Cell cell{1, 1, true};   // an empty cell in the middle row
@@ -85,6 +88,9 @@ TEST(Editor, CycleWalksUpToTheCapThenBackToEmpty)
         game::cycle_cell(level, cell);
         EXPECT_EQ(level.at(1, 1), expected);
     }
+
+    game::cycle_cell(level, cell);
+    EXPECT_EQ(level.at(1, 1), game::STEEL);
 
     game::cycle_cell(level, cell);
     EXPECT_EQ(level.at(1, 1), 0);
@@ -155,4 +161,81 @@ TEST(Editor, HasBricksOnlyWhenACellIsNotEmpty)
     EXPECT_TRUE(game::has_bricks(canvas));
 
     EXPECT_FALSE(game::has_bricks(game::Level{}));
+}
+
+// ---- Steel in the editor ----------------------------------------------------
+
+// From any state, six clicks go once round empty, 1, 2, 3, 4, steel and back.
+TEST(Editor, SixClicksGoOnceRoundEveryStateWithSteelAfterFour)
+{
+    const int states[] = {0, 1, 2, 3, 4, game::STEEL};
+    const game::Cell cell{0, 0, true};
+
+    for (std::size_t start = 0; start < 6; start++)
+    {
+        game::Level level = game::editor_canvas(game::Level{});
+        level.set(0, 0, states[start]);
+
+        for (std::size_t click = 1; click <= 6; click++)
+        {
+            game::cycle_cell(level, cell);
+            EXPECT_EQ(level.at(0, 0), states[(start + click) % 6]) << "from " << states[start] << ", click " << click;
+        }
+    }
+}
+
+TEST(Editor, ClickingSteelEmptiesTheCell)
+{
+    game::Level level = game::parse_level("#");
+
+    game::cycle_cell(level, game::Cell{0, 0, true});
+
+    EXPECT_EQ(level.at(0, 0), 0);
+}
+
+// Still to empty, never to steel, as CycleClearsHitPointsAboveTheCap has it for 7.
+TEST(Editor, EveryValueAboveTheCapGoesToEmptyNotToSteel)
+{
+    for (int hit_points = game::MAX_EDITABLE_HIT_POINTS + 1; hit_points <= 9; ++hit_points)
+    {
+        game::Level level = game::parse_level(std::to_string(hit_points));
+
+        game::cycle_cell(level, game::Cell{0, 0, true});
+
+        EXPECT_EQ(level.at(0, 0), 0) << hit_points;
+    }
+}
+
+TEST(Editor, RightClickEmptiesASteelCell)
+{
+    game::Level level = game::parse_level("#1");
+
+    game::clear_cell(level, game::Cell{0, 0, true});
+
+    EXPECT_EQ(level.at(0, 0), 0);
+    EXPECT_EQ(level.at(1, 0), 1);
+}
+
+TEST(EditorCanvas, KeepsSteel)
+{
+    const game::Level canvas = game::editor_canvas(game::parse_level("1#\n#2"));
+
+    EXPECT_EQ(canvas.at(1, 0), game::STEEL);
+    EXPECT_EQ(canvas.at(0, 1), game::STEEL);
+    EXPECT_EQ(canvas.at(1, 1), 2);
+}
+
+// Steel alone cannot be cleared, so it is as good as an empty canvas: Enter
+// shows NOTHING TO PLAY and S shows NOTHING TO SAVE.
+TEST(Editor, OnlySteelIsNotBricks)
+{
+    game::Level canvas = game::editor_canvas(game::Level{});
+    for (int column = 0; column < game::EDITOR_COLUMNS; ++column)
+    {
+        canvas.set(column, 0, game::STEEL);
+    }
+    EXPECT_FALSE(game::has_bricks(canvas));
+
+    canvas.set(0, game::EDITOR_ROWS - 1, 1);
+    EXPECT_TRUE(game::has_bricks(canvas));
 }

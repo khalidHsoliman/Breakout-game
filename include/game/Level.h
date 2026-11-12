@@ -6,12 +6,17 @@
 
 namespace game
 {
+    // The value a steel brick has in Level::hit_points: it cannot be broken.
+    // Negative, so code that counts hit_points > 0 as a brick never takes a
+    // steel brick for one that can be broken.
+    inline constexpr int STEEL = -1;
+
     // Row 0 is the top row, as it reads in the text.
     struct Level
     {
         int columns = 0;
         int rows = 0;
-        std::vector<int> hit_points;   // row-major, columns * rows entries
+        std::vector<int> hit_points;   // row-major, columns * rows entries; STEEL for steel
 
         // Returns 0 outside the grid rather than reading out of bounds.
         int at(int column, int row) const;
@@ -21,7 +26,7 @@ namespace game
     };
 
     // The level played when there are no level files. Digits are hit points,
-    // '.' is an empty cell.
+    // '#' is steel, '.' is an empty cell.
     inline constexpr const char* BUILT_IN_LEVEL = R"(
 ..111111..
 .12222221.
@@ -30,10 +35,11 @@ namespace game
 ..111111..
 )";
 
-    // Tolerates CRLF, blank leading and trailing lines, and ragged rows.
+    // Tolerates CRLF, blank leading and trailing lines, and ragged rows. '1' to
+    // '9' are hit points, '#' is STEEL, anything else is an empty cell.
     Level parse_level(std::string_view text);
 
-    // The inverse: one line per row, '.' for an empty cell, a digit otherwise,
-    // and a newline after every row including the last.
+    // The inverse: one line per row, '.' for an empty cell, '#' for STEEL, a
+    // digit otherwise, and a newline after every row including the last.
     std::string to_text(const Level& level);
 }

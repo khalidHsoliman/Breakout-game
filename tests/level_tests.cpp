@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <string>
+
 #include "game/Level.h"
 
 TEST(ParseLevel, ReadsAGrid)
@@ -70,6 +72,31 @@ TEST(ParseLevel, AnythingOutsideOneToNineIsEmpty)
     EXPECT_EQ(level.at(4, 0), 0);
 }
 
+// '#' is a steel brick, and it is a cell like any other: it counts towards the
+// width and keeps its place in the row.
+TEST(ParseLevel, HashIsSteel)
+{
+    const game::Level level = game::parse_level("1#.\n.#2#");
+
+    EXPECT_EQ(level.columns, 4);
+    EXPECT_EQ(level.rows, 2);
+    EXPECT_EQ(level.at(0, 0), 1);
+    EXPECT_EQ(level.at(1, 0), game::STEEL);
+    EXPECT_EQ(level.at(2, 0), 0);
+    EXPECT_EQ(level.at(3, 0), 0);
+    EXPECT_EQ(level.at(0, 1), 0);
+    EXPECT_EQ(level.at(1, 1), game::STEEL);
+    EXPECT_EQ(level.at(2, 1), 2);
+    EXPECT_EQ(level.at(3, 1), game::STEEL);
+}
+
+// Steel is not a number of hits, so nothing else may ever read as it.
+TEST(ParseLevel, SteelIsNeitherEmptyNorABreakableBrick)
+{
+    EXPECT_LT(game::STEEL, 0);
+    EXPECT_NE(game::parse_level("#").at(0, 0), 0);
+}
+
 TEST(ParseLevel, EmptyInputGivesAnEmptyLevel)
 {
     const game::Level level = game::parse_level("");
@@ -124,6 +151,32 @@ TEST(ToText, ClampsHitPointsToASingleDigit)
     level.hit_points = {12, -3};
 
     EXPECT_EQ(game::to_text(level), "9.\n");
+}
+
+TEST(ToText, WritesHashForSteel)
+{
+    game::Level level;
+    level.columns = 3;
+    level.rows = 1;
+    level.hit_points = {game::STEEL, 2, 0};
+
+    EXPECT_EQ(game::to_text(level), "#2.\n");
+}
+
+TEST(ToText, SteelRoundTripsThroughTheParser)
+{
+    const char* sources[] = {
+        "#1",
+        "1#1\n#.#\n###",
+        "..#111#..\n.1234567.",
+    };
+
+    for (const char* source : sources)
+    {
+        const game::Level original = game::parse_level(source);
+        EXPECT_EQ(game::parse_level(game::to_text(original)), original) << source;
+        EXPECT_EQ(game::to_text(original), std::string(source) + "\n") << source;
+    }
 }
 
 TEST(Level, AtIsSafeOutsideTheGrid)
