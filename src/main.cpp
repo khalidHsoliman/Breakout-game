@@ -12,6 +12,7 @@
 #include "game/Editor.h"
 #include "game/LevelFiles.h"
 #include "game/LevelLayout.h"
+#include "game/Replay.h"
 #include "game/Spawn.h"
 #include "game/Systems.h"
 #include "math/Lerp.h"
@@ -315,8 +316,12 @@ int main()
     world.size = WORLD_SIZE;
 
     // Different drops every run. Seeded once: a restart keeps the generator.
-    world.rng.seed(std::random_device{}());
-    game::start_game(world, std::move(loaded.levels));
+    world.seed_rng(std::random_device{}());
+
+    // Every game is recorded, and saved here when it is lost or won.
+    const std::filesystem::path replay_path = executable_directory / "replays" / "last.txt";
+    game::Recorder recorder;
+    recorder.start(world, std::move(loaded.levels));
 
     std::chrono::steady_clock::time_point previous = std::chrono::steady_clock::now();
     float accumulator = 0.0f;
@@ -433,7 +438,7 @@ int main()
                 // An empty canvas would be won the moment it was launched.
                 if (game::has_bricks(canvas))
                 {
-                    game::start_game(world, canvas);
+                    recorder.start(world, {canvas});
                     mode = AppMode::Playing;
                 }
                 else
@@ -460,7 +465,14 @@ int main()
                     continue;
                 }
 
-                game::step(world, input, game::FIXED_DT);
+                if (recorder.step(world, input))
+                {
+                    const std::string error = game::save_replay(replay_path, recorder.replay());
+                    if (!error.empty())
+                    {
+                        std::fprintf(stderr, "%s\n", error.c_str());
+                    }
+                }
 
                 // Shake decays over time
                 shake = std::max(0.0f, shake - SHAKE_DECAY * game::FIXED_DT);

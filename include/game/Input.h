@@ -19,5 +19,7 @@ namespace game
             toggle_pause = false;
             restart = false;
         }
+
+        bool operator==(const Input&) const = default;
     };
 }

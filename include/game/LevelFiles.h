@@ -8,6 +8,17 @@
 
 namespace game
 {
+    // The whole of a file, read as bytes, or the reason it could not be:
+    // contents is empty and error says why. Does not throw. Shared with the
+    // replay files.
+    struct ReadResult
+    {
+        std::string contents;
+        std::string error;
+    };
+
+    ReadResult read_file(const std::filesystem::path& path);
+
     // "level-1.txt", "level-2.txt", ...
     std::string level_file_name(int number);
 

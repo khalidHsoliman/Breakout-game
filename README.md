@@ -45,8 +45,8 @@ instead.
 
 The window and sound layer is Windows only, so on Linux the option
 `BREAKOUT_BUILD_PLATFORM=OFF` leaves out `breakout_platform`, GLFW, glad,
-miniaudio and the `breakout` executable, and builds `breakout_game` and the
-tests. It is `ON` by default, so the Windows build and presets are unaffected.
+miniaudio and the `breakout` executable, and builds `breakout_game`,
+`breakout_replay` and the tests. It is `ON` by default, so the Windows build and presets are unaffected.
 Requires a C and C++ compiler, make and CMake 3.21 or newer; on Ubuntu or
 Debian:
 
@@ -68,7 +68,8 @@ CMake from pip (`pip install cmake`) works too, but still needs `make`, or
 ctest --test-dir build -C Debug
 ```
 
-274 tests. CI runs them in Debug and Release on Windows for pushes and pull
+364 tests: 361 GoogleTest tests, and three that run `breakout_replay` on
+the files in `tests/replays/`. CI runs them in Debug and Release on Windows for pushes and pull
 requests to `main`. On Linux with GCC 13 they pass in both configurations and
 build with no warnings.
 
@@ -262,6 +263,122 @@ time it starts. A test play with Enter replaces the loaded levels with the
 canvas, and R after it plays the canvas again; it stays that way until the game
 is started again.
 
+## Replays
+
+Every game is recorded while it is played. When it ends in a game over or a
+win, it is saved as a text file to `replays/last.txt` beside the executable (on
+Windows, `build/bin/Release/replays/last.txt`), so it can be played again
+exactly, to reproduce a bug. The folder is made if it is missing, and each game
+that ends replaces the last one. A game that is quit, or left for a test play,
+before it ends is not saved. If the file cannot be written, the reason goes to
+stderr and the game carries on.
+
+### What is recorded
+
+- Where the capsule generator was when the game started: its seed, and how
+  many numbers had been drawn from it. R and a test play carry on with the same
+  generator, so after the first game this is not 0.
+- The levels the game started with, as the game holds them: every level that
+  loaded, or for a test play the canvas as its only level.
+- The input of every step that ran, paused steps included. The frames of the
+  short stop after a brick is hit run no step, so they are not in it. Steps in
+  a row with the same input are one line.
+- How the game ended: after how many steps, the score, lives, level, bricks
+  left and whether it was lost or won.
+
+A recording starts with its game: when the game starts, at R after a game over
+or a win (the step with R is the first one of the new recording), and at Enter
+in the editor. E to the editor and E back keeps the same recording. Steps after
+the end, until R, are not recorded.
+
+### The file
+
+```
+breakout replay 1
+seed 2024
+skip 5
+level 5
+..111111..
+.12222221.
+1233333321
+.12222221.
+..111111..
+steps
+60 left
+1 launch
+146 -
+1 launch
+156 -
+1 launch
+156 -
+end steps 521 score 30 lives 0 level 1 bricks 36 state gameover
+```
+
+`skip` is how many numbers the generator had already drawn. Each `level`
+line gives the number of rows that follow, written as in a level file. A step
+line is a count and the keys held or pressed in those steps, from `left`,
+`right`, `launch`, `pause` and `restart`, or `-` for none. The end line counts
+the level from 1, as the HUD does, and only `gameover` and `won` can end a
+replay.
+
+A replay is checked when it is read, as a level file is, and every level in it
+has to pass the level checks. A bad or edited file is refused with the file
+name, the line and, in a level row, the column:
+
+```
+last.txt:13: 'nothing' is not a key: the keys are left, right, launch, pause and restart
+last.txt:6:3: 'x' is not allowed: a level may only contain digits, '#', '.' and spaces
+last.txt:18: the end line says 531 steps, but the step lines add up to 521
+```
+
+LF and CRLF line endings both work, as does a byte order mark at the start.
+
+### breakout_replay
+
+`breakout_replay` plays a replay file through the game logic, with no window
+and no sound. It needs only `breakout_game`, so it is built on Linux too, into
+`build/bin/` (on Windows, `build/bin/Release/breakout_replay.exe`):
+
+```
+breakout_replay replays/last.txt
+```
+
+It prints how the game ended, on which step, and whether that is what the file
+expected:
+
+```
+score 30
+lives 0
+level 1
+bricks 36
+state gameover
+ended on step 521 of 521
+MATCH: the file expected score 30 lives 0 level 1 bricks 36 state gameover on step 521
+```
+
+MATCH means the same game: it was lost or won on the file's last step, not
+before and not after, with the score, lives, level, bricks left and state on
+the file's end line. Anything else is DIFFERENT: a number that is not the
+same, a game that ended earlier (`ended on step 521 of 531`), or one that had
+not ended by the last step (`did not end in its 500 steps`). The bricks left
+are counted, not compared one by one, so DIFFERENT is certain but MATCH is
+strong evidence rather than proof: another game would have to end on the same
+step with the same score, lives and number of bricks.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | MATCH |
+| 2 | DIFFERENT |
+| 1 | a bad or missing file, or not exactly one argument; the reason is on stderr |
+
+Only GCC 13 on Linux has been checked. There, a game recorded in a Debug build
+matches in a Release build and the other way round, over twenty minutes of
+games with multi-ball and hundreds of paddle bounces. The paddle bounce and
+multi-ball use `std::sin` and `std::cos`, which can differ in the last bit
+between compilers' libraries, so a game recorded by the Windows build may come
+out DIFFERENT from a Linux build of `breakout_replay`. A `breakout_replay` built
+by the same compiler as the game is the one to trust.
+
 ## How it is put together
 
 Four layers, with the dependency direction enforced by CMake target linkage
@@ -274,7 +391,7 @@ rather than by convention:
         Window, Renderer,           World, Systems, Level,
         Viewport, Font,             Spawn, Editor, LevelLayout,
         FileSystem, Audio           LevelCheck, LevelFiles,
-                                    Input, Events
+                                    Input, Events, Replay
                  \                 /
                        core
                        Entity, ComponentStore, Color
@@ -287,8 +404,9 @@ rather than by convention:
 cannot draw and the renderer cannot know what a brick is; `main.cpp` is the only
 place they meet. The include directory for glad is `PRIVATE` to the platform
 target, so a stray `#include <glad/gl.h>` in the game layer does not compile.
-The game layer does read and write level files, with `std::filesystem` only,
-so that code is tested too; `main.cpp` just passes it the folder.
+The game layer does read and write level and replay files, with
+`std::filesystem` only, so that code is tested too; `main.cpp` just passes it
+the paths. `breakout_replay` links the game layer alone.
 
 Entities are a strongly-typed id and components live in sparse sets - a dense
 array for iteration, a sparse index for lookup. Systems are free functions over
@@ -298,7 +416,11 @@ behaviour does not change with frame rate.
 The only randomness that changes play - whether a brick drops a capsule, and
 which kind - comes from a `std::mt19937` that belongs to the `World`. `main`
 seeds it once at startup from `std::random_device`, R keeps using it rather than
-starting it over, and the tests seed it themselves. The drops use the engine's
+starting it over, and the tests seed it themselves. Every number is drawn
+through `World::next_random`, which counts them, so a replay can find where the
+generator was: its seed, then that many numbers skipped. A test plays a long
+game and checks that the seed and the count lead to exactly where the
+generator is. The drops use the engine's
 raw output rather than a `std::` distribution: the standard fixes the numbers an
 engine produces from a seed, but not what the distributions make of them.
 Particles and screen shake still use `std::rand`; they are for show, and a long
@@ -314,7 +436,9 @@ that every component, the score, lives, state, level and the generator are
 exactly equal at the end, and that capsules dropped, both kinds were caught,
 some were missed, multi-ball added balls and lives were lost along the way. With
 GCC 13 it ends the same in Debug and Release; other compilers have not been
-checked.
+checked. A third records twenty minutes of games the same way, saves each one
+that ends as a replay, reads it back, and plays it: every component and the
+generator have to end exactly as they did when it was recorded.
 
 Rendering is one dynamic vertex buffer and a single draw call per frame. Text is
 a hand-encoded 5x7 bitmap font drawn as one quad per lit pixel through that same

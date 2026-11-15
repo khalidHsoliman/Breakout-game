@@ -13,46 +13,39 @@
 
 namespace game
 {
-    namespace
+    ReadResult read_file(const std::filesystem::path& path)
     {
-        // The contents, or the reason they could not be had.
-        struct ReadResult
+        std::error_code code;
+        if (!std::filesystem::is_regular_file(path, code))
         {
-            std::string contents;
-            std::string error;
-        };
+            // A folder with the file's name, say. Reading one with
+            // ifstream opens fine and then throws on the first read.
+            return ReadResult{{}, "it is not a file that can be read"};
+        }
 
-        ReadResult read_file(const std::filesystem::path& path)
+        std::ifstream file(path, std::ios::binary);
+        if (!file)
         {
-            std::error_code code;
-            if (!std::filesystem::is_regular_file(path, code))
-            {
-                // A folder with the file's name, say. Reading one with
-                // ifstream opens fine and then throws on the first read.
-                return ReadResult{{}, "it is not a file that can be read"};
-            }
+            return ReadResult{{}, "the file could not be opened"};
+        }
 
-            std::ifstream file(path, std::ios::binary);
-            if (!file)
-            {
-                return ReadResult{{}, "the file could not be opened"};
-            }
-
-            try
-            {
-                std::string contents{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
-                if (file.bad())
-                {
-                    return ReadResult{{}, "the file could not be read"};
-                }
-                return ReadResult{std::move(contents), {}};
-            }
-            catch (const std::exception&)
+        try
+        {
+            std::string contents{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+            if (file.bad())
             {
                 return ReadResult{{}, "the file could not be read"};
             }
+            return ReadResult{std::move(contents), {}};
         }
+        catch (const std::exception&)
+        {
+            return ReadResult{{}, "the file could not be read"};
+        }
+    }
 
+    namespace
+    {
         std::string describe(const std::string& file_name, const LevelProblem& problem)
         {
             // Problems with the whole file have no position to point at.

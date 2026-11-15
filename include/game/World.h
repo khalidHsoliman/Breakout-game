@@ -67,7 +67,21 @@ namespace game
         // output is used, never a std distribution: the standard fixes the
         // former but not the latter, so a seed drops the same capsules with
         // MSVC and with GCC. A restart keeps it going rather than reseeding.
+        // Seed it with seed_rng and draw from it with next_random, so a replay
+        // can find where it was: rng_seed, then rng_draws numbers skipped.
         std::mt19937 rng{DEFAULT_SEED};
+
+        // The seed rng last got from seed_rng, and how many numbers
+        // next_random has drawn from it since.
+        std::uint32_t rng_seed = DEFAULT_SEED;
+        std::uint64_t rng_draws = 0;
+
+        // Seeds rng and starts counting its draws again from 0.
+        void seed_rng(std::uint32_t seed);
+
+        // The next number from rng, counted in rng_draws. A draw that goes
+        // round this and calls rng() directly would leave replays behind.
+        std::uint32_t next_random();
 
         // A member rather than only a constant, so a test can make every brick
         // drop, or none.

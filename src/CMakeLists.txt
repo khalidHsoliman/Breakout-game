@@ -13,12 +13,20 @@ add_library(breakout_game STATIC
     game/LevelLayout.cpp
     game/LevelCheck.cpp
     game/LevelFiles.cpp
-    game/Editor.cpp)
+    game/Editor.cpp
+    game/Replay.cpp)
 
 target_include_directories(breakout_game PUBLIC "${CMAKE_SOURCE_DIR}/include")
 target_link_libraries(breakout_game
     PUBLIC  breakout_core
     PRIVATE breakout_options)
+
+# Plays a replay file through the game logic alone, so it needs nothing of
+# the platform side and builds with BREAKOUT_BUILD_PLATFORM=OFF too.
+add_executable(breakout_replay
+    breakout_replay.cpp)
+
+target_link_libraries(breakout_replay PRIVATE breakout_game breakout_options)
 
 # Everything below this line is the window, sound and executable side.
 if(NOT BREAKOUT_BUILD_PLATFORM)

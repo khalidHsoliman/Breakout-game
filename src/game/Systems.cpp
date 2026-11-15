@@ -136,20 +136,21 @@ namespace game
 
         // True with the given chance. Built on the engine's raw output, which
         // the standard fixes, so a seed gives the same answers on every compiler.
-        bool roll(std::mt19937& rng, float chance)
+        // Drawn through next_random, so every draw is counted for replays.
+        bool roll(World& world, float chance)
         {
             const double outcomes = static_cast<double>(std::mt19937::max()) + 1.0;
-            return static_cast<double>(rng()) < static_cast<double>(chance) * outcomes;
+            return static_cast<double>(world.next_random()) < static_cast<double>(chance) * outcomes;
         }
 
         void maybe_drop_capsule(World& world, math::Vec2 position)
         {
-            if (!roll(world.rng, world.capsule_drop_chance))
+            if (!roll(world, world.capsule_drop_chance))
             {
                 return;
             }
 
-            const PowerUp kind = roll(world.rng, 0.5f) ? PowerUp::WidePaddle : PowerUp::MultiBall;
+            const PowerUp kind = roll(world, 0.5f) ? PowerUp::WidePaddle : PowerUp::MultiBall;
             spawn_capsule(world, position, kind);
         }
 

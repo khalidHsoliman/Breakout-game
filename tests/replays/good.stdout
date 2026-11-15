@@ -1,0 +1,7 @@
+score 30
+lives 0
+level 1
+bricks 36
+state gameover
+ended on step 521 of 521
+MATCH: the file expected score 30 lives 0 level 1 bricks 36 state gameover on step 521
