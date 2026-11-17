@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <numbers>
 #include <random>
 #include <vector>
@@ -23,6 +24,13 @@ namespace game
         constexpr int POINTS_PER_HIT = 10;
 
         constexpr float PARTICLE_GRAVITY = 420.0f;
+
+        // A beam is checked against the bricks once per step, so it must not
+        // be able to cross one in a step.
+        static_assert(
+            BEAM_SPEED * FIXED_DT < BRICK_HEIGHT,
+            "a beam can cross a brick in a single step and pass through it"
+        );
 
         math::AABB bounds_of(const Transform& transform)
         {
@@ -120,6 +128,16 @@ namespace game
             }
         }
 
+        void clear_beams(World& world)
+        {
+            const std::vector<core::Entity>& entities = world.beams.entities();
+
+            for (std::size_t i = 0; i < world.beams.size(); i++)
+            {
+                world.destroyed.add(entities[i], Destroyed{});
+            }
+        }
+
         bool overlaps(const math::AABB& a, const math::AABB& b)
         {
             return a.min.x < b.max.x && b.min.x < a.max.x
@@ -143,6 +161,24 @@ namespace game
             return static_cast<double>(world.next_random()) < static_cast<double>(chance) * outcomes;
         }
 
+        // A third each, from one number of the engine's raw output, so a drop
+        // still draws two numbers in all: whether, then what.
+        PowerUp capsule_kind(std::uint32_t number)
+        {
+            const double third = (static_cast<double>(std::mt19937::max()) + 1.0) / 3.0;
+            const double value = static_cast<double>(number);
+
+            if (value < third)
+            {
+                return PowerUp::WidePaddle;
+            }
+            if (value < 2.0 * third)
+            {
+                return PowerUp::MultiBall;
+            }
+            return PowerUp::Laser;
+        }
+
         void maybe_drop_capsule(World& world, math::Vec2 position)
         {
             if (!roll(world, world.capsule_drop_chance))
@@ -150,8 +186,7 @@ namespace game
                 return;
             }
 
-            const PowerUp kind = roll(world, 0.5f) ? PowerUp::WidePaddle : PowerUp::MultiBall;
-            spawn_capsule(world, position, kind);
+            spawn_capsule(world, position, capsule_kind(world.next_random()));
         }
 
         void narrow_paddle(Transform& transform, Paddle& paddle)
@@ -171,6 +206,18 @@ namespace game
                 {
                     narrow_paddle(*transform, *world.paddles.find(entities[i]));
                 }
+            }
+        }
+
+        void stop_lasers(World& world)
+        {
+            const std::vector<core::Entity>& entities = world.paddles.entities();
+
+            for (std::size_t i = 0; i < world.paddles.size(); i++)
+            {
+                Paddle& paddle = *world.paddles.find(entities[i]);
+                paddle.laser_time_left = 0.0f;
+                paddle.laser_cooldown = 0.0f;
             }
         }
 
@@ -244,8 +291,8 @@ namespace game
         }
 
         // The ball goes back onto the paddle to be served again, with one
-        // ball, no capsules and a normal paddle. What losing the last ball
-        // does, apart from the life.
+        // ball, no capsules or beams, and a normal paddle without lasers.
+        // What losing the last ball does, apart from the life.
         void serve_again(World& world, core::Entity ball)
         {
             Velocity* velocity = world.velocities.find(ball);
@@ -256,7 +303,9 @@ namespace game
 
             clear_particles(world);
             clear_capsules(world);
+            clear_beams(world);
             narrow_paddles(world);
+            stop_lasers(world);
             world.state = GameState::Ready;
         }
 
@@ -312,6 +361,109 @@ namespace game
             }
         }
 
+        // What any hit on a brick that can be broken does, a ball's or a
+        // beam's: one hit point off and the points for it, then particles, a
+        // chance of a capsule and removal if that was its last, or a new
+        // colour if not.
+        void damage_brick(World& world, core::Entity entity, Brick& brick)
+        {
+            const int brick_hit_points = brick.hit_points;
+            brick.hit_points -= 1;
+
+            // Per hit rather than per brick, so a tough brick is worth more
+            // without needing to remember what it started at.
+            world.score += POINTS_PER_HIT;
+
+            if (brick.hit_points <= 0)
+            {
+                if (const Transform* dead = world.transforms.find(entity); dead != nullptr)
+                {
+                    // Copied: spawning adds transforms and can move the store.
+                    const math::Vec2 position = dead->position;
+                    const math::Vec2 size = dead->size;
+                    spawn_brick_particles(world, position, size, brick_color(brick_hit_points));
+                    maybe_drop_capsule(world, position);
+                }
+
+                world.destroyed.add(entity, Destroyed{});
+            }
+            else if (core::Color* color = world.colors.find(entity); color != nullptr)
+            {
+                // Re-colour to the remaining toughness.
+                *color = brick_color(brick.hit_points);
+            }
+        }
+
+        // Keeps hit_entity and lowest at the live brick in store that beam
+        // overlaps with the lowest bottom edge so far.
+        template <typename Component>
+        void find_lowest_overlap(const World& world, const core::ComponentStore<Component>& store,
+                                 const math::AABB& beam, core::Entity& hit_entity, float& lowest)
+        {
+            const std::vector<core::Entity>& entities = store.entities();
+
+            for (std::size_t i = 0; i < store.size(); i++)
+            {
+                const core::Entity entity = entities[i];
+                const Transform* brick = world.transforms.find(entity);
+                if (!is_alive(world, entity) || brick == nullptr)
+                {
+                    continue;
+                }
+
+                const math::AABB bounds = bounds_of(*brick);
+                if (overlaps(beam, bounds) && bounds.min.y < lowest)
+                {
+                    hit_entity = entity;
+                    lowest = bounds.min.y;
+                }
+            }
+        }
+
+        // One beam against the bricks and steel. A beam hits only the lowest
+        // it overlaps, and is used up by it. Bricks are searched first, so of
+        // two level with each other the one that can be broken is hit.
+        void beam_hits(World& world, core::Entity beam_entity)
+        {
+            const Transform* transform = world.transforms.find(beam_entity);
+            if (!is_alive(world, beam_entity) || transform == nullptr)
+            {
+                return;
+            }
+
+            const math::AABB beam = bounds_of(*transform);
+
+            // Out of the top: nothing left up there to hit.
+            if (beam.min.y >= world.size.y)
+            {
+                world.destroyed.add(beam_entity, Destroyed{});
+                return;
+            }
+
+            core::Entity hit_entity = core::NULL_ENTITY;
+            float lowest = world.size.y;
+            find_lowest_overlap(world, world.bricks, beam, hit_entity, lowest);
+            find_lowest_overlap(world, world.steel, beam, hit_entity, lowest);
+
+            if (hit_entity == core::NULL_ENTITY)
+            {
+                return;
+            }
+
+            world.destroyed.add(beam_entity, Destroyed{});
+
+            // Steel stops it and takes nothing from it.
+            if (world.steel.has(hit_entity))
+            {
+                world.events.push_back(GameEvent::SteelHit);
+                return;
+            }
+
+            // No ball touched anything: no speed-up and no stuck-ball clock.
+            world.events.push_back(GameEvent::LaserHit);
+            damage_brick(world, hit_entity, *world.bricks.find(hit_entity));
+        }
+
         void bounce_off_bricks(World& world, Transform& transform, Velocity& velocity, Ball& ball_state)
         {
             const math::Circle ball{transform.position, ball_state.radius};
@@ -348,35 +500,12 @@ namespace game
                 // Any hit on a brick that can be broken, whether or not it breaks.
                 ball_state.time_since_touch = 0.0f;
 
-                const int brick_hit_points = brick->hit_points;
-                brick->hit_points -= 1;
-
                 world.events.push_back(GameEvent::BrickHit);
 
                 // Per brick hit
                 speed_up(velocity);
 
-                // Per hit rather than per brick, so a tough brick is worth more
-                // without needing to remember what it started at.
-                world.score += POINTS_PER_HIT;
-
-                if (brick->hit_points <= 0)
-                {
-                    if (const Transform* dead = world.transforms.find(hit_entity); dead != nullptr)
-                    {
-                        // Copied: spawning adds transforms and can move the store.
-                        const math::Vec2 position = dead->position;
-                        spawn_brick_particles(world, position, dead->size, brick_color(brick_hit_points));
-                        maybe_drop_capsule(world, position);
-                    }
-
-                    world.destroyed.add(hit_entity, Destroyed{});
-                }
-                else if (core::Color* color = world.colors.find(hit_entity); color != nullptr)
-                {
-                    // Re-colour to the remaining toughness.
-                    *color = brick_color(brick->hit_points);
-                }
+                damage_brick(world, hit_entity, *brick);
             }
         }
     }
@@ -634,6 +763,17 @@ namespace game
             }
         }
 
+        // Also first, for the same reason. Beams already fired fly on when
+        // it runs out.
+        for (std::size_t i = 0; i < world.paddles.size(); i++)
+        {
+            Paddle& paddle = *world.paddles.find(paddle_entities[i]);
+            if (paddle.laser_time_left > 0.0f)
+            {
+                paddle.laser_time_left = std::max(0.0f, paddle.laser_time_left - dt);
+            }
+        }
+
         const std::vector<core::Entity>& capsule_entities = world.capsules.entities();
 
         for (std::size_t i = 0; i < world.capsules.size(); i++)
@@ -667,6 +807,10 @@ namespace game
                     // Adds transforms, so no pointer taken above is used after this.
                     add_balls(world);
                     break;
+                case PowerUp::Laser:
+                    // Set rather than added, so another catch restarts the time.
+                    world.paddles.find(paddle_entities[p])->laser_time_left = LASER_TIME;
+                    break;
                 }
             }
 
@@ -675,6 +819,42 @@ namespace game
             {
                 world.destroyed.add(entity, Destroyed{});
             }
+        }
+    }
+
+    void laser_system(World& world, const Input& input, float dt)
+    {
+        // The beams that were there before any is fired in this step.
+        // damage_brick spawns particles and capsules, never beams, so the
+        // store is not changed underneath this.
+        for (std::size_t i = 0; i < world.beams.size(); i++)
+        {
+            beam_hits(world, world.beams.entities()[i]);
+        }
+
+        for (std::size_t i = 0; i < world.paddles.size(); i++)
+        {
+            const core::Entity entity = world.paddles.entities()[i];
+            Paddle& paddle = *world.paddles.find(entity);
+            paddle.laser_cooldown = std::max(0.0f, paddle.laser_cooldown - dt);
+
+            const Transform* transform = world.transforms.find(entity);
+            if (!input.launch || paddle.laser_time_left <= 0.0f || paddle.laser_cooldown > 0.0f ||
+                transform == nullptr)
+            {
+                continue;
+            }
+
+            // From just inside each end of the paddle, whatever its width,
+            // with the beam's bottom on the paddle's top. Copied: spawning
+            // adds transforms and can move the store.
+            const float x = transform->position.x;
+            const float offset = transform->size.x * 0.5f - BEAM_INSET;
+            const float y = transform->position.y + transform->size.y * 0.5f + BEAM_HEIGHT * 0.5f;
+
+            paddle.laser_cooldown = LASER_FIRE_INTERVAL;
+            spawn_beam(world, math::Vec2{x - offset, y});
+            spawn_beam(world, math::Vec2{x + offset, y});
         }
     }
 
@@ -695,6 +875,7 @@ namespace game
 
         clear_particles(world);
         clear_capsules(world);
+        clear_beams(world);
         world.state = GameState::Won;
     }
 
@@ -795,6 +976,7 @@ namespace game
             movement_system(world, dt);
             collision_system(world);
             power_up_system(world, dt);
+            laser_system(world, input, dt);
             trail_system(world);
             particle_system(world, dt);
             stuck_ball_system(world, dt);

@@ -211,7 +211,7 @@ TEST(CapsuleDrop, OnlyTheHitThatDestroysABrickDrops)
     }
 }
 
-// 15% of bricks, half of them each kind. The seed is fixed and only the
+// 15% of bricks, a third of them each kind. The seed is fixed and only the
 // engine's raw output is used, so this is the same count on every compiler.
 TEST(CapsuleDrop, AboutOneBrickInSevenDropsAndTheKindsAreEven)
 {
@@ -229,16 +229,34 @@ TEST(CapsuleDrop, AboutOneBrickInSevenDropsAndTheKindsAreEven)
 
     int wide = 0;
     int multi = 0;
+    int laser = 0;
     for (const game::PowerUp kind : kinds_dropped(world))
     {
-        (kind == game::PowerUp::WidePaddle ? wide : multi) += 1;
+        switch (kind)
+        {
+        case game::PowerUp::WidePaddle:
+            wide += 1;
+            break;
+        case game::PowerUp::MultiBall:
+            multi += 1;
+            break;
+        case game::PowerUp::Laser:
+            laser += 1;
+            break;
+        }
     }
 
-    const int drops = wide + multi;
+    const int drops = wide + multi + laser;
     EXPECT_GE(drops, 250);   // 300 expected
     EXPECT_LE(drops, 350);
-    EXPECT_GE(wide, drops * 2 / 5);
-    EXPECT_GE(multi, drops * 2 / 5);
+
+    // A third is 100 of 300; each kind within a fifth of its share.
+    EXPECT_GE(wide, drops * 4 / 15) << "wide";
+    EXPECT_LE(wide, drops * 6 / 15) << "wide";
+    EXPECT_GE(multi, drops * 4 / 15) << "multi-ball";
+    EXPECT_LE(multi, drops * 6 / 15) << "multi-ball";
+    EXPECT_GE(laser, drops * 4 / 15) << "laser";
+    EXPECT_LE(laser, drops * 6 / 15) << "laser";
 }
 
 TEST(CapsuleDrop, TheSameSeedDropsTheSameCapsules)
@@ -257,7 +275,7 @@ TEST(CapsuleDrop, TheSameSeedDropsTheSameCapsules)
             if (world.capsules.size() != before)
             {
                 const core::Entity capsule = world.capsules.entities().back();
-                drops.push_back(i * 2 + static_cast<int>(world.capsules.find(capsule)->kind));
+                drops.push_back(i * 3 + static_cast<int>(world.capsules.find(capsule)->kind));
             }
         }
         return drops;
@@ -317,7 +335,7 @@ TEST(Capsule, IsFortyByFourteenInTheColourOfItsKind)
 {
     game::World world = make_world();
 
-    for (const game::PowerUp kind : {game::PowerUp::WidePaddle, game::PowerUp::MultiBall})
+    for (const game::PowerUp kind : {game::PowerUp::WidePaddle, game::PowerUp::MultiBall, game::PowerUp::Laser})
     {
         const core::Entity capsule = game::spawn_capsule(world, math::Vec2{300.0f, 400.0f}, kind);
 
@@ -348,16 +366,21 @@ TEST(Capsule, FallsStraightDownAtOneHundredAndFiftyUnitsASecond)
     EXPECT_NEAR(transform->position.y, 400.0f - 150.0f, TOLERANCE);
 }
 
-TEST(CapsuleColor, WideIsBlueMultiBallIsGreenAndNeitherLooksLikeABrick)
+TEST(CapsuleColor, WideIsBlueMultiBallIsGreenLaserIsRedAndNoneLooksLikeABrick)
 {
     const core::Color wide = game::capsule_color(game::PowerUp::WidePaddle);
     const core::Color multi = game::capsule_color(game::PowerUp::MultiBall);
+    const core::Color laser = game::capsule_color(game::PowerUp::Laser);
 
     EXPECT_GT(wide.b, wide.r);
     EXPECT_GT(wide.b, wide.g);
     EXPECT_GT(multi.g, multi.r);
     EXPECT_GT(multi.g, multi.b);
+    EXPECT_GT(laser.r, laser.g);
+    EXPECT_GT(laser.r, laser.b);
     EXPECT_GT(distance(wide, multi), 0.3f);
+    EXPECT_GT(distance(wide, laser), 0.3f);
+    EXPECT_GT(distance(multi, laser), 0.3f);
 
     // 5 and up share one colour, so 1 to 5 is every brick colour there is.
     for (int hit_points = 1; hit_points <= 5; hit_points++)
@@ -365,7 +388,12 @@ TEST(CapsuleColor, WideIsBlueMultiBallIsGreenAndNeitherLooksLikeABrick)
         const core::Color brick = game::brick_color(hit_points);
         EXPECT_GT(distance(wide, brick), 0.3f) << "wide paddle and a " << hit_points << "-hit brick";
         EXPECT_GT(distance(multi, brick), 0.3f) << "multi-ball and a " << hit_points << "-hit brick";
+        EXPECT_GT(distance(laser, brick), 0.3f) << "laser and a " << hit_points << "-hit brick";
     }
+
+    // The 3-hit brick is red too, so the laser's red is kept well clear of
+    // it, not just over the line.
+    EXPECT_GT(distance(laser, game::brick_color(3)), 0.4f);
 }
 
 TEST(Capsule, AMissedCapsuleDisappearsOnceAllOfItIsBelowTheFloor)
@@ -391,7 +419,7 @@ TEST(Capsule, AMissedCapsuleDisappearsOnceAllOfItIsBelowTheFloor)
 
 TEST(Capsule, ACaughtCapsuleIsUsedUpAndScoresNothing)
 {
-    for (const game::PowerUp kind : {game::PowerUp::WidePaddle, game::PowerUp::MultiBall})
+    for (const game::PowerUp kind : {game::PowerUp::WidePaddle, game::PowerUp::MultiBall, game::PowerUp::Laser})
     {
         game::World world = playing_world();
 
@@ -919,6 +947,7 @@ namespace
         int dropped = 0;
         int caught_wide = 0;
         int caught_multi = 0;
+        int caught_laser = 0;
         int missed = 0;
 
         // Gone with a lost life, a cleared level or a win, unless the test can
@@ -926,6 +955,8 @@ namespace
         int cleared = 0;
 
         int steps_adding_balls = 0;
+        int beams_fired = 0;
+        int bricks_hit_by_beams = 0;
         int most_balls = 0;
         int lives_lost = 0;
         int levels_cleared = 0;
@@ -945,11 +976,13 @@ namespace
     // every ten seconds, so it never settles into one path that hits nothing.
     // Every other ten seconds it ignores capsules, and for the last four
     // seconds of every minute it does not move, so capsules are missed and
-    // lives lost as well.
+    // lives lost as well. With lasers it holds Space, which fires as often
+    // as the lasers allow.
     game::Input autopilot(const game::World& world, int step)
     {
         game::Input input;
-        input.launch = world.state == game::GameState::Ready;
+        input.launch = world.state == game::GameState::Ready ||
+                       world.paddles.components()[0].laser_time_left > 0.0f;
         input.restart = world.state == game::GameState::GameOver || world.state == game::GameState::Won;
 
         if (step % 3600 >= 3360)
@@ -1017,6 +1050,7 @@ namespace
                 before.push_back({capsule, world.transforms.find(capsule)->position.y, world.capsules.find(capsule)->kind});
             }
             const std::size_t balls_before = world.balls.size();
+            const std::vector<core::Entity> beams_before = world.beams.entities();
             const float wide_before = world.paddles.components()[0].wide_time_left;
             const game::GameState state_before = world.state;
             const int lives_before = world.lives;
@@ -1024,8 +1058,17 @@ namespace
 
             game::step(world, autopilot(world, i), DT);
 
+            tally.bricks_hit_by_beams += static_cast<int>(
+                std::count(world.events.begin(), world.events.end(), game::GameEvent::LaserHit));
+
             // What main does with them once a frame.
             world.events.clear();
+
+            for (const core::Entity beam : world.beams.entities())
+            {
+                const bool is_new = std::find(beams_before.begin(), beams_before.end(), beam) == beams_before.end();
+                tally.beams_fired += is_new ? 1 : 0;
+            }
 
             for (const core::Entity capsule : world.capsules.entities())
             {
@@ -1053,7 +1096,18 @@ namespace
                 }
                 else
                 {
-                    (seen.kind == game::PowerUp::WidePaddle ? tally.caught_wide : tally.caught_multi) += 1;
+                    switch (seen.kind)
+                    {
+                    case game::PowerUp::WidePaddle:
+                        tally.caught_wide += 1;
+                        break;
+                    case game::PowerUp::MultiBall:
+                        tally.caught_multi += 1;
+                        break;
+                    case game::PowerUp::Laser:
+                        tally.caught_laser += 1;
+                        break;
+                    }
                 }
             }
 
@@ -1078,6 +1132,8 @@ namespace
                 EXPECT_EQ(world.balls.size(), 1u) << "step " << i;
                 EXPECT_EQ(world.capsules.size(), 0u) << "step " << i;
                 EXPECT_EQ(paddle.size.x, game::PADDLE_WIDTH) << "step " << i;
+                EXPECT_EQ(world.beams.size(), 0u) << "step " << i;
+                EXPECT_EQ(world.paddles.components()[0].laser_time_left, 0.0f) << "step " << i;
             }
             if (world.paddles.components()[0].wide_time_left > wide_before)
             {
@@ -1130,11 +1186,13 @@ namespace
         EXPECT_TRUE(same_store(a.balls, b.balls, [](const game::Ball& x, const game::Ball& y)
             { return x.radius == y.radius; })) << "balls";
         EXPECT_TRUE(same_store(a.paddles, b.paddles, [](const game::Paddle& x, const game::Paddle& y)
-            { return x.speed == y.speed && x.wide_time_left == y.wide_time_left; })) << "paddles";
+            { return x.speed == y.speed && x.wide_time_left == y.wide_time_left &&
+                     x.laser_time_left == y.laser_time_left && x.laser_cooldown == y.laser_cooldown; })) << "paddles";
         EXPECT_TRUE(same_store(a.bricks, b.bricks, [](const game::Brick& x, const game::Brick& y)
             { return x.hit_points == y.hit_points; })) << "bricks";
         EXPECT_TRUE(same_store(a.capsules, b.capsules, [](const game::Capsule& x, const game::Capsule& y)
             { return x.kind == y.kind; })) << "capsules";
+        EXPECT_TRUE(same_store(a.beams, b.beams, [](auto, auto) { return true; })) << "beams";
         EXPECT_TRUE(same_store(a.particles, b.particles, [](const game::Particle& x, const game::Particle& y)
             { return x.lifetime == y.lifetime && x.max_life == y.max_life; })) << "particles";
         EXPECT_TRUE(same_store(a.circle_shapes, b.circle_shapes, [](auto, auto) { return true; })) << "circle shapes";
@@ -1147,9 +1205,10 @@ namespace
 //
 // Another compiler's sin and cos can differ in the last bit, which makes a
 // different game, as deterministic as this one. So what is asserted to have
-// happened below is what happened in every one of 60 seeds tried here, not
-// just in this one; clearing a level is printed but not required, since 5 of
-// those 60 games never managed it.
+// happened below is what happened in seeds 1 to 60 as well, not just in this
+// one: all of it in 59 of them, the laser checks failing only for seed 59,
+// which never caught a laser capsule. Clearing a level is printed but not
+// required, since seed 9 never managed it.
 TEST(LongGame, TheSameSeedPlaysTheSameGameWithPowerUps)
 {
     constexpr int FIFTEEN_MINUTES = 15 * 60 * 60;
@@ -1158,21 +1217,26 @@ TEST(LongGame, TheSameSeedPlaysTheSameGameWithPowerUps)
     const Game second = play(2024, FIFTEEN_MINUTES);
 
     const Tally& t = first.tally;
-    std::printf("[ tally    ] %d capsules dropped: %d caught (%d wide, %d multi-ball), %d missed, %d cleared, %d still falling\n"
+    std::printf("[ tally    ] %d capsules dropped: %d caught (%d wide, %d multi-ball, %d laser), %d missed, %d cleared, %d still falling\n"
+                "[ tally    ] %d beams fired, %d bricks hit by beams\n"
                 "[ tally    ] %d steps added balls, most balls %d, %d lives lost, %d levels cleared, %d restarts, score %d\n",
-        t.dropped, t.caught_wide + t.caught_multi, t.caught_wide, t.caught_multi, t.missed, t.cleared,
-        static_cast<int>(first.world.capsules.size()), t.steps_adding_balls, t.most_balls, t.lives_lost,
-        t.levels_cleared, t.restarts, first.world.score);
+        t.dropped, t.caught_wide + t.caught_multi + t.caught_laser, t.caught_wide, t.caught_multi, t.caught_laser,
+        t.missed, t.cleared, static_cast<int>(first.world.capsules.size()), t.beams_fired, t.bricks_hit_by_beams,
+        t.steps_adding_balls, t.most_balls, t.lives_lost, t.levels_cleared, t.restarts, first.world.score);
 
     // It really was a game with power-ups in it.
     EXPECT_GT(t.dropped, 0);
     EXPECT_GT(t.caught_wide, 0);
     EXPECT_GT(t.caught_multi, 0);
+    EXPECT_GT(t.caught_laser, 0);
     EXPECT_GT(t.missed, 0);
     EXPECT_GT(t.steps_adding_balls, 0);
     EXPECT_GE(t.most_balls, 3);
+    EXPECT_GT(t.beams_fired, 0);
+    EXPECT_GT(t.bricks_hit_by_beams, 0);
     EXPECT_GT(t.lives_lost, 0);
-    EXPECT_EQ(t.dropped, t.caught_wide + t.caught_multi + t.missed + t.cleared + static_cast<int>(first.world.capsules.size()))
+    EXPECT_EQ(t.dropped, t.caught_wide + t.caught_multi + t.caught_laser + t.missed + t.cleared +
+                             static_cast<int>(first.world.capsules.size()))
         << "a capsule went unaccounted for";
 
     EXPECT_TRUE(first.tally == second.tally);

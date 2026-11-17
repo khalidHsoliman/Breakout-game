@@ -236,20 +236,31 @@ namespace game
 
         void expect_header(Reader& reader)
         {
+            const std::string version = std::to_string(REPLAY_VERSION);
+            const std::string header = "'breakout replay " + version + "'";
+
             const int line_number = reader.line_number();
-            const std::string_view line = reader.take("'breakout replay 1'");
+            const std::string_view line = reader.take(header.c_str());
             const std::vector<std::string_view> parts = words(line);
 
             if (parts.size() == 3 && parts[0] == "breakout" && parts[1] == "replay")
             {
-                if (parts[2] == std::to_string(REPLAY_VERSION))
+                if (parts[2] == version)
                 {
                     return;
                 }
-                if (number(parts[2], MAX_INT))
+                if (const std::optional<std::uint64_t> other = number(parts[2], MAX_INT))
                 {
+                    // Recorded by an older game, under rules this one no
+                    // longer plays by, so it cannot be played back here.
+                    if (*other >= 1 && *other < static_cast<std::uint64_t>(REPLAY_VERSION))
+                    {
+                        fail(line_number, "this is a version " + std::string(parts[2]) +
+                                              " replay, from an older version of the game: only version " + version +
+                                              " can be read");
+                    }
                     fail(line_number, "this is a version " + std::string(parts[2]) + " replay, but only version " +
-                                          std::to_string(REPLAY_VERSION) + " can be read");
+                                          version + " can be read");
                 }
             }
 

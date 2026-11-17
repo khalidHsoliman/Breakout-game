@@ -74,8 +74,8 @@ namespace
     constexpr float CAPSULE_LETTER_PIXEL = 1.5f;
 
     // The background colour, so the letter reads as cut out of the capsule. A
-    // dark letter stands out on both the blue and the green; white would not
-    // on the green.
+    // dark letter stands out on the blue, the green and the red; white would
+    // not on the green.
     constexpr core::Color CAPSULE_LETTER_COLOR{0.10f, 0.12f, 0.15f};
 
     // Held state is overwritten each frame. One-shot actions are OR-ed in and
@@ -85,6 +85,8 @@ namespace
         input.move_left = window.is_key_down(platform::Key::MoveLeft);
         input.move_right = window.is_key_down(platform::Key::MoveRight);
 
+        // Space also fires the lasers. Pressed, not held: holding it down
+        // fires one pair, and each pair needs a press of its own.
         input.launch |= window.is_key_pressed(platform::Key::Launch);
         input.toggle_pause |= window.is_key_pressed(platform::Key::Pause);
         input.restart |= window.is_key_pressed(platform::Key::Restart);
@@ -150,6 +152,8 @@ namespace
             return "W";
         case game::PowerUp::MultiBall:
             return "M";
+        case game::PowerUp::Laser:
+            return "L";
         }
         return "";
     }
@@ -501,6 +505,12 @@ int main()
 
                 case game::GameEvent::PaddleBounce:
                     audio.play(platform::Sound::PaddleBounce);
+                    break;
+
+                case game::GameEvent::LaserHit:
+                    // The brick sound, with no shake and no pause: beams hit
+                    // several times a second, and the game would stutter.
+                    audio.play(platform::Sound::BrickHit);
                     break;
                 }
             }

@@ -13,8 +13,12 @@
 
 namespace game
 {
-    // The first line of every replay file. A format change gets a new number.
-    inline constexpr int REPLAY_VERSION = 1;
+    // The first line of every replay file. A format change gets a new number,
+    // and so does a change to the rules that makes an old game play
+    // differently: version 2 is the one with the laser capsule, which changed
+    // what kind of capsule every drop is. Only this version is read; an
+    // older file is refused, not played by the wrong rules.
+    inline constexpr int REPLAY_VERSION = 2;
 
     // count steps in a row that all got the same input.
     struct ReplayRun
@@ -114,7 +118,7 @@ namespace game
     bool replay_matches(const Replay& replay, const PlayedReplay& played);
 
     // The file format, in order. Every line ends with LF:
-    //   breakout replay 1
+    //   breakout replay 2
     //   seed <0 to 4294967295>
     //   skip <numbers already drawn, 0 to 4294967295>
     //   level <rows>        then that many rows, as to_text(Level) writes them

@@ -32,11 +32,25 @@ namespace game
     inline constexpr float MULTI_BALL_ANGLE = std::numbers::pi_v<float> / 6.0f;
     inline constexpr int MAX_BALLS = 5;
 
+    // The laser power-up: for how many seconds, and how often Space can fire
+    // a pair of beams while it lasts.
+    inline constexpr float LASER_TIME = 10.0f;
+    inline constexpr float LASER_FIRE_INTERVAL = 0.3f;
+
+    // A beam's size and upward speed, and how far inside each end of the
+    // paddle the two of a pair leave from.
+    inline constexpr float BEAM_WIDTH = 4.0f;
+    inline constexpr float BEAM_HEIGHT = 16.0f;
+    inline constexpr float BEAM_SPEED = 600.0f;
+    inline constexpr float BEAM_INSET = 10.0f;
+
     // Colour carries the remaining toughness, so it has to be re-applied when a
     // brick is damaged - not only when it is spawned. STEEL is grey.
     core::Color brick_color(int hit_points);
 
-    // Blue for the wide paddle, green for multi-ball: no brick is either.
+    // Blue for the wide paddle, green for multi-ball and red for the laser:
+    // no brick is any of them, the laser's red being well deeper than a
+    // 3-hit brick's.
     core::Color capsule_color(PowerUp kind);
 
     core::Entity spawn_paddle(World& world);
@@ -49,6 +63,10 @@ namespace game
 
     // A capsule holding kind, falling straight down from position.
     core::Entity spawn_capsule(World& world, math::Vec2 position, PowerUp kind);
+
+    // A beam going straight up from position, its centre. It is drawn in
+    // the laser capsule's red.
+    core::Entity spawn_beam(World& world, math::Vec2 position);
 
     // particles thrown from a brick that just died, in the colour it was.
     void spawn_brick_particles(World& world, math::Vec2 center, math::Vec2 size, core::Color color);

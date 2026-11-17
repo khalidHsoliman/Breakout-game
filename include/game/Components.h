@@ -36,6 +36,12 @@ namespace game
 
         // Seconds of wide paddle left; 0 when it is its normal width.
         float wide_time_left = 0.0f;
+
+        // Seconds of lasers left; 0 when it has none.
+        float laser_time_left = 0.0f;
+
+        // Seconds until Space can fire the next pair of beams; 0 when it can.
+        float laser_cooldown = 0.0f;
     };
 
     struct Brick
@@ -51,7 +57,8 @@ namespace game
     enum class PowerUp
     {
         WidePaddle,
-        MultiBall
+        MultiBall,
+        Laser
     };
 
     // Dropped by a destroyed brick, falls straight down, and gives its power-up
@@ -60,6 +67,11 @@ namespace game
     {
         PowerUp kind = PowerUp::WidePaddle;
     };
+
+    // Tag: a laser beam fired up from the paddle. It breaks the first brick
+    // it reaches as a ball would, stops at steel, and passes through balls
+    // and capsules.
+    struct Beam {};
 
     struct Particle
     {

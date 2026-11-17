@@ -6,6 +6,10 @@ namespace game
     {
         BrickHit,
         SteelHit,
-        PaddleBounce
+        PaddleBounce,
+
+        // A beam hit a brick that can be broken. A beam that stops at steel
+        // raises SteelHit.
+        LaserHit
     };
 }

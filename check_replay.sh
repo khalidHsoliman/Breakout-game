@@ -378,7 +378,7 @@ int main(int, char** argv)
     // 1
     {
         const game::LoadedReplay loaded = game::load_replay(file_1);
-        const bool header = !lines_1.empty() && lines_1[0] == "breakout replay 1";
+        const bool header = !lines_1.empty() && lines_1[0] == "breakout replay " + std::to_string(game::REPLAY_VERSION);
         const bool ok = ended_1 && save_error.empty() && loaded.ok && loaded.replay == game_1 && header &&
                         game_1.levels.size() == 2 && game_1.seed == 2024 && game_1.skip == 3;
         report(ok, "1   a recorded game saves, loads back unchanged, with its seed, skip and both levels",

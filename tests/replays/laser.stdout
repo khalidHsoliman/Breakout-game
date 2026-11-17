@@ -1,0 +1,7 @@
+score 210
+lives 0
+level 1
+bricks 16
+state gameover
+ended on step 967 of 967
+MATCH: the file expected score 210 lives 0 level 1 bricks 16 state gameover on step 967

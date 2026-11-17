@@ -23,6 +23,7 @@ add_executable(breakout_tests
     level_check_tests.cpp
     level_files_tests.cpp
     power_up_tests.cpp
+    laser_tests.cpp
     steel_tests.cpp
     stuck_ball_tests.cpp
     replay_tests.cpp)
@@ -41,6 +42,16 @@ gtest_discover_tests(breakout_tests)
 # the numbers on its end line are right. The good file's game never touches the paddle after
 # a launch and catches nothing, so no sin or cos decides it and it should end
 # the same with any compiler.
+#
+# laser.txt is a game in which a laser capsule is caught and its beams break
+# bricks. The ball gets above the bricks through the gap in the middle and
+# bounces there long enough for capsules to reach the paddle, which keeps out
+# of its way: it never touches the paddle and there is never a second ball, so
+# no sin or cos decides this one either. old.txt is good.txt as version 1
+# recorded it, from before the laser: refused, not played by the new rules.
+#
+# All but old.txt were recorded through game::Recorder and written by
+# to_text, not by hand; bad.txt is then good.txt with one key made unknown.
 set(replays "${CMAKE_CURRENT_SOURCE_DIR}/replays")
 
 add_test(NAME BreakoutReplay.PlaysAGoodFile
@@ -57,6 +68,22 @@ add_test(NAME BreakoutReplay.SaysWhenTheEndIsDifferent
         "-DREPLAY=${replays}/different.txt"
         -DEXIT_CODE=2
         "-DEXPECTED_STDOUT=${replays}/different.stdout"
+        -P "${replays}/run_replay.cmake")
+
+add_test(NAME BreakoutReplay.PlaysALaserGame
+    COMMAND "${CMAKE_COMMAND}"
+        "-DPROGRAM=$<TARGET_FILE:breakout_replay>"
+        "-DREPLAY=${replays}/laser.txt"
+        -DEXIT_CODE=0
+        "-DEXPECTED_STDOUT=${replays}/laser.stdout"
+        -P "${replays}/run_replay.cmake")
+
+add_test(NAME BreakoutReplay.RefusesAnOlderVersion
+    COMMAND "${CMAKE_COMMAND}"
+        "-DPROGRAM=$<TARGET_FILE:breakout_replay>"
+        "-DREPLAY=${replays}/old.txt"
+        -DEXIT_CODE=1
+        "-DEXPECTED_STDERR=${replays}/old.stderr"
         -P "${replays}/run_replay.cmake")
 
 add_test(NAME BreakoutReplay.RefusesABadFile

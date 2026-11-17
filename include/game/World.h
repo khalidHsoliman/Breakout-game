@@ -97,6 +97,7 @@ namespace game
         core::ComponentStore<Steel> steel;
         core::ComponentStore<Particle> particles;
         core::ComponentStore<Capsule> capsules;
+        core::ComponentStore<Beam> beams;
         core::ComponentStore<Destroyed> destroyed;
 
     private:

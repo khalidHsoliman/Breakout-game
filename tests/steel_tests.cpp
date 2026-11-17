@@ -169,6 +169,7 @@ TEST(SteelSpawn, IsGreyAndLooksLikeNoBrickCapsuleOrPaddle)
     }
     EXPECT_GT(distance(steel, game::capsule_color(game::PowerUp::WidePaddle)), 0.15f);
     EXPECT_GT(distance(steel, game::capsule_color(game::PowerUp::MultiBall)), 0.15f);
+    EXPECT_GT(distance(steel, game::capsule_color(game::PowerUp::Laser)), 0.15f);
 
     game::World world = make_world();
     const core::Entity paddle = game::spawn_paddle(world);

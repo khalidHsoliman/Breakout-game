@@ -60,6 +60,8 @@ namespace game
             return core::Color{0.15f, 0.40f, 0.95f};
         case PowerUp::MultiBall:
             return core::Color{0.25f, 0.85f, 0.35f};
+        case PowerUp::Laser:
+            return core::Color{0.85f, 0.0f, 0.0f};
         }
         return core::Color{};
     }
@@ -110,6 +112,18 @@ namespace game
         world.colors.add(entity, capsule_color(kind));
         world.velocities.add(entity, Velocity{math::Vec2{0.0f, -CAPSULE_SPEED}});
         world.capsules.add(entity, Capsule{kind});
+
+        return entity;
+    }
+
+    core::Entity spawn_beam(World& world, math::Vec2 position)
+    {
+        const core::Entity entity = world.create_entity();
+
+        world.transforms.add(entity, Transform{position, math::Vec2{BEAM_WIDTH, BEAM_HEIGHT}, position});
+        world.colors.add(entity, capsule_color(PowerUp::Laser));
+        world.velocities.add(entity, Velocity{math::Vec2{0.0f, BEAM_SPEED}});
+        world.beams.add(entity, Beam{});
 
         return entity;
     }

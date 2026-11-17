@@ -103,7 +103,8 @@ namespace
         {
             const game::Paddle& paddle = *world.paddles.find(entity);
             text += "paddle" + transform(world, entity) + " speed " + hex(paddle.speed) + " wide " +
-                    hex(paddle.wide_time_left) + "\n";
+                    hex(paddle.wide_time_left) + " laser " + hex(paddle.laser_time_left) + " cooldown " +
+                    hex(paddle.laser_cooldown) + "\n";
         }
         for (const core::Entity entity : world.bricks.entities())
         {
@@ -119,6 +120,10 @@ namespace
         {
             text += "capsule" + transform(world, entity) + velocity(world, entity) + " kind " +
                     std::to_string(static_cast<int>(world.capsules.find(entity)->kind)) + "\n";
+        }
+        for (const core::Entity entity : world.beams.entities())
+        {
+            text += "beam" + transform(world, entity) + velocity(world, entity) + "\n";
         }
 
         return text + "generator " + generator.str() + "\n";
@@ -153,11 +158,13 @@ namespace
     // every ten seconds. Every other ten seconds it ignores capsules, for four
     // seconds of every three minutes it does not move, and it pauses for a
     // second every minute, so games are won and lost, capsules caught and
-    // missed, and paused steps recorded. R after a win or a loss.
+    // missed, and paused steps recorded. With lasers it holds Space, which
+    // fires as often as they allow. R after a win or a loss.
     game::Input autopilot(const game::World& world, int step)
     {
         game::Input input;
-        input.launch = world.state == game::GameState::Ready;
+        input.launch = world.state == game::GameState::Ready ||
+                       world.paddles.components()[0].laser_time_left > 0.0f;
         input.restart = world.state == game::GameState::GameOver || world.state == game::GameState::Won;
 
         // On, and off again a second later.
@@ -217,6 +224,7 @@ namespace
         int most_balls = 0;
         int paused_steps = 0;
         bool played_steel = false;
+        bool fired_beams = false;
     };
 
     std::vector<game::Level> two_levels()
@@ -246,6 +254,7 @@ namespace
                 run.paused_steps += world.state == game::GameState::Paused ? 1 : 0;
                 run.most_balls = std::max(run.most_balls, static_cast<int>(world.balls.size()));
                 run.played_steel = run.played_steel || world.steel.size() > 0;
+                run.fired_beams = run.fired_beams || world.beams.size() > 0;
 
                 if (ended)
                 {
@@ -278,7 +287,7 @@ namespace
     }
 
     constexpr std::string_view SMALL_TEXT =
-        "breakout replay 1\n"   // 1
+        "breakout replay 2\n"   // 1
         "seed 42\n"             // 2
         "skip 7\n"              // 3
         "level 2\n"             // 4
@@ -659,7 +668,7 @@ TEST(PlayReplay, PlaysTheRunsStepByStep)
 
 // Every game the autopilot finished, saved as text, read back and played,
 // ends exactly as it did: the result, every ball, brick, steel, capsule and
-// the paddle, and the generator.
+// beam, the paddle and its power-ups' time, and the generator.
 TEST(PlayReplay, EveryGameOfALongSessionPlaysBackExactly)
 {
     const LongGame& run = long_game();
@@ -670,6 +679,7 @@ TEST(PlayReplay, EveryGameOfALongSessionPlaysBackExactly)
     EXPECT_GE(run.most_balls, 3) << "multi-ball never added balls";
     EXPECT_GT(run.paused_steps, 0);
     EXPECT_TRUE(run.played_steel);
+    EXPECT_TRUE(run.fired_beams) << "no beam was fired, so lasers were not played back";
     EXPECT_EQ(run.finished[0].replay.skip, 0u);
     EXPECT_GT(run.finished.back().replay.skip, 0u) << "no game started with numbers already drawn";
 
@@ -977,9 +987,13 @@ namespace
             {"Empty", "", 0, 0, "the file is empty"},
             {"OnlyBlankLines", "\n  \n\r\n", 0, 0, "the file is empty"},
             {"NotAReplay", replace_line(1, "..111.."), 1, 0,
-             "this is not a breakout replay: the first line should be 'breakout replay 1'"},
-            {"AnotherVersion", replace_line(1, "breakout replay 2"), 1, 0,
-             "this is a version 2 replay, but only version 1 can be read"},
+             "this is not a breakout replay: the first line should be 'breakout replay 2'"},
+            {"AnOlderVersion", replace_line(1, "breakout replay 1"), 1, 0,
+             "this is a version 1 replay, from an older version of the game: only version 2 can be read"},
+            {"ANewerVersion", replace_line(1, "breakout replay 3"), 1, 0,
+             "this is a version 3 replay, but only version 2 can be read"},
+            {"VersionZero", replace_line(1, "breakout replay 0"), 1, 0,
+             "this is a version 0 replay, but only version 2 can be read"},
             {"SeedMisspelt", replace_line(2, "sed 42"), 2, 0,
              "expected 'seed' and a number from 0 to 4294967295, not 'sed 42'"},
             {"SeedNegative", replace_line(2, "seed -1"), 2, 0,
@@ -1032,9 +1046,9 @@ namespace
              "a blank line: expected a step count and its keys, or the end line"},
             {"CutShortInTheSteps", replace_line(13, ""), 0, 0,
              "the file ends where a step count and its keys, or the end line should be: it may have been cut short"},
-            {"CutShortInTheHeader", "breakout replay 1\nseed 42\n", 0, 0,
+            {"CutShortInTheHeader", "breakout replay 2\nseed 42\n", 0, 0,
              "the file ends where 'skip' and a number from 0 to 4294967295 should be: it may have been cut short"},
-            {"CutShortInALevel", "breakout replay 1\nseed 42\nskip 0\nlevel 2\n1.1\n", 0, 0,
+            {"CutShortInALevel", "breakout replay 2\nseed 42\nskip 0\nlevel 2\n1.1\n", 0, 0,
              "the file ends inside the level that starts on line 4: it may have been cut short"},
             {"EndLineShort", replace_line(13, "end steps 6 score 10"), 13, 0,
              "expected 'end steps <n> score <n> lives <n> level <n> bricks <n> state <state>', "

@@ -1,0 +1,62 @@
+breakout replay 2
+seed 140
+skip 0
+level 4
+1111..1111
+1111..1111
+2222..2222
+1111..1111
+steps
+13 left
+1 launch
+212 -
+1 launch
+78 -
+24 right
+1 -
+16 left
+65 -
+8 left
+1 launch
+78 -
+26 right
+148 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+4 -
+13 left
+1 left launch
+11 left
+6 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+6 -
+10 left
+1 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+17 -
+1 launch
+6 -
+end steps 967 score 210 lives 0 level 1 bricks 16 state gameover

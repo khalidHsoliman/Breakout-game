@@ -32,6 +32,7 @@ namespace game
         steel.remove(entity);
         particles.remove(entity);
         capsules.remove(entity);
+        beams.remove(entity);
         destroyed.remove(entity);
     }
 }

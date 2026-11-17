@@ -68,17 +68,34 @@ CMake from pip (`pip install cmake`) works too, but still needs `make`, or
 ctest --test-dir build -C Debug
 ```
 
-364 tests: 361 GoogleTest tests, and three that run `breakout_replay` on
+394 tests: 389 GoogleTest tests, and five that run `breakout_replay` on
 the files in `tests/replays/`. CI runs them in Debug and Release on Windows for pushes and pull
 requests to `main`. On Linux with GCC 13 they pass in both configurations and
 build with no warnings.
+
+### The check scripts
+
+Five scripts in the repo root check a feature from end to end, outside CMake
+and GoogleTest. Each needs only `g++` with C++20: it compiles `src/game/*.cpp`
+and a check program of its own into a temp folder - `check_replay.sh` builds
+`breakout_replay` as well, and runs it - plays seeded games through
+`game::step`, and prints one line per check. Nothing is written inside the
+repo, and the last line is `RESULT: ALL n CHECKS PASSED`, or how many failed.
+
+```
+bash check_levels.sh      # 12 checks: the levels folder and the file format
+bash check_powerups.sh    # 13 checks: the drops, the capsules, wide paddle and multi-ball
+bash check_lasers.sh      # 14 checks: the laser capsule, firing and the beams
+bash check_steel.sh       # 11 checks: steel, and a ball stuck between it
+bash check_replay.sh      # 14 checks: recording, saving, reading back and breakout_replay
+```
 
 ## Controls
 
 | Key | In the game |
 |---|---|
 | Left / Right | Move the paddle |
-| Space | Launch the ball |
+| Space | Launch the ball, and fire the lasers while they last |
 | P | Pause |
 | R | Restart, after a win or a loss |
 | E | Open the level editor |
@@ -101,7 +118,7 @@ and a damaged brick recolours as it is hit. Steel is grey in the game.
 ## Power-ups
 
 Every brick that is destroyed, whatever its toughness, has a 15% chance of
-dropping a capsule where it was, and each of the two kinds is equally likely. A
+dropping a capsule where it was, and each of the three kinds is equally likely. A
 capsule is 40 by 14 and falls straight down at 150 units a second. Touching the
 paddle catches it; one that is missed disappears below the floor and costs
 nothing. Catching one scores nothing. Steel is never destroyed, so it never
@@ -111,12 +128,30 @@ drops one.
 |---|---|
 | Blue, marked W | **Wide paddle.** The paddle is 180 wide instead of 120 for 10 seconds. Catching another restarts the 10 seconds without making it any wider. A paddle that widens against a wall is kept inside it, and the time does not run while the game is paused. |
 | Green, marked M | **Multi-ball.** Two more balls leave from a ball still in play, at its speed, 30 degrees either side of straight up. There are never more than 5 balls: with 4 in play a catch adds one, with 5 it adds none. With no ball in play it does nothing. |
+| Red, marked L | **Lasers.** For 10 seconds, Space fires a pair of beams up from just inside the paddle's ends, at most one pair every 0.3 seconds. Catching another restarts the 10 seconds, and the time does not run while the game is paused. |
+
+Space fires on the press, not while it is held down: a pair needs a press of
+its own, and only while the game is playing. The same key launches the ball,
+which is never waiting to be launched while the lasers are on.
+
+A beam is 4 by 16 and goes straight up at 600 units a second, from the ends of
+the paddle it has, so a wide paddle fires from further apart. It takes one hit
+off the lowest brick it reaches, exactly as a ball's hit does - the points, the
+particles and the chance of a capsule - and is used up by it, but it does not
+speed the ball up, and it passes through balls and capsules. Steel stops it and
+takes nothing from it. A beam breaking a brick sounds like the ball breaking
+one, without the short stop and the shake that the ball's hit makes: a stream
+of beams would stutter. Where both beams of a pair reach one wide brick at once,
+each takes a hit off it; if the first breaks it, the second flies on to
+whatever is above. A beam that hits nothing leaves at the top of the screen, and
+beams already flying when the 10 seconds run out finish their flight.
 
 A life is lost only when the last ball in play falls, and only one life, however
-many balls fall in the same step. Losing a life clears the capsules, puts the
-paddle back to 120 and serves a single ball. The next level and R after a win
-or a loss also start with no capsules, one ball and a normal paddle, and a win
-clears the capsules still falling.
+many balls fall in the same step. Losing a life clears the capsules and the
+beams, puts the paddle back to 120 without lasers and serves a single ball. The
+next level and R after a win or a loss also start with no capsules or beams,
+one ball and a normal paddle, and a win clears the capsules still falling and
+the beams still flying.
 
 The numbers are in `include/game/Spawn.h` and, for the drop chance,
 `include/game/World.h`.
@@ -128,6 +163,9 @@ off it as off any brick, but a steel hit does no damage, scores nothing, drops
 no capsule, makes no particles and does not speed the ball up. When a ball
 touches a brick and steel in the same step, only the deeper contact counts, as
 between two bricks.
+
+A beam from the lasers stops at steel in the same way, with the same sound and
+no damage.
 
 A level is cleared when its last brick that can be broken goes, however much
 steel is left. A file with only steel is refused, like one with no bricks.
@@ -294,7 +332,7 @@ the end, until R, are not recorded.
 ### The file
 
 ```
-breakout replay 1
+breakout replay 2
 seed 2024
 skip 5
 level 5
@@ -320,6 +358,15 @@ line is a count and the keys held or pressed in those steps, from `left`,
 `right`, `launch`, `pause` and `restart`, or `-` for none. The end line counts
 the level from 1, as the HUD does, and only `gameover` and `won` can end a
 replay.
+
+The first line is the format's version. Only this one is read: the laser
+capsule changed which kind of capsule every drop is, so a version 1 file, from
+before it, would play a different game now. Rather than play it by the wrong
+rules, the game refuses it:
+
+```
+last.txt:1: this is a version 1 replay, from an older version of the game: only version 2 can be read
+```
 
 A replay is checked when it is read, as a level file is, and every level in it
 has to pass the level checks. A bad or edited file is refused with the file
@@ -433,8 +480,9 @@ autopilot play fifteen minutes of game time with power-ups, on the built-in
 level and a second one, restarting after a win or a loss, and missing on
 purpose now and then. It plays that game twice with the same seed and checks
 that every component, the score, lives, state, level and the generator are
-exactly equal at the end, and that capsules dropped, both kinds were caught,
-some were missed, multi-ball added balls and lives were lost along the way. With
+exactly equal at the end, and that capsules dropped, all three kinds were
+caught, some were missed, multi-ball added balls, beams were fired and broke
+bricks, and lives were lost along the way. With
 GCC 13 it ends the same in Debug and Release; other compilers have not been
 checked. A third records twenty minutes of games the same way, saves each one
 that ends as a replay, reads it back, and plays it: every component and the

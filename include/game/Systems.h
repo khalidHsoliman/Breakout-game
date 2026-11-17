@@ -35,10 +35,19 @@ namespace game
     void trail_system(World& world);
     void particle_system(World& world, float dt);
 
-    // Runs down the wide paddle's time, gives a caught capsule's power-up to
-    // the paddle, and removes capsules that are caught or fall past the floor.
-    // Playing only, so the time stands still while paused.
+    // Runs down the wide paddle's and the lasers' time, gives a caught
+    // capsule's power-up to the paddle, and removes capsules that are caught
+    // or fall past the floor. Playing only, so the time stands still while
+    // paused.
     void power_up_system(World& world, float dt);
+
+    // The beams movement_system moved in this step hit what they reach: the
+    // lowest brick or steel each one overlaps, one hit, and the beam is gone.
+    // Beams past the top of the play area are removed. Then a paddle with
+    // lasers fires a pair on launch, at most once every LASER_FIRE_INTERVAL.
+    // Playing only, after power_up_system, so a laser caught in this step can
+    // fire in it.
+    void laser_system(World& world, const Input& input, float dt);
 
     // In a level with steel only, so a level without any plays exactly as
     // before. Runs each ball's clock, and takes a ball that has gone
